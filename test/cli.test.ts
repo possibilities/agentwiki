@@ -289,6 +289,13 @@ describe("the agent surface", () => {
     expect(body.data.healthy).toBe(false);
   });
 
+  test("graph exports absolute paths, like every other command", () => {
+    const { status, body } = envelope(["graph", "--json"]);
+    expect(status).toBe(0);
+    expect(body.data.nodes.length).toBeGreaterThan(0);
+    for (const node of body.data.nodes) expect(node.path.startsWith(vault)).toBe(true);
+  });
+
   test("resolve is data, never an error, even for a phrase that matches nothing", () => {
     const { status, body } = envelope(["resolve", "absolutely nothing like this", "--json"]);
     expect(status).toBe(0);

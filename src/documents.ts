@@ -388,8 +388,14 @@ export function graphCommand(context: Context, flags: ParsedFlags): CommandResul
   const index = openIndex(context, { create: false });
   try {
     const snapshot = snapshotOf(index);
+    // Every other command hands back an absolute path an agent can open;
+    // the graph export must not be the one that speaks vault-relative.
+    const nodes = snapshot.nodes.map((node) => ({
+      ...node,
+      path: join(context.vaultRoot, node.path),
+    }));
     return {
-      data: snapshot,
+      data: { ...snapshot, nodes },
       human: `${snapshot.nodes.length} nodes, ${snapshot.edges.length} edges, ${snapshot.dangling.length} dangling`,
     };
   } finally {
