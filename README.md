@@ -13,7 +13,7 @@ nothing. [docs/adr/](docs/adr/) records the decisions, starting with
 
 ## Install
 
-Requires Bun 1.3.14.
+Requires Bun ≥ 1.3.14.
 
 ```bash
 ./scripts/install.sh
@@ -46,7 +46,7 @@ so a voice agent can say what it means:
 $ agentwiki get "the bluetooth trap" --meta-only
 # Bluetooth Q30 HFP trap
 slug: bluetooth-q30-hfp-trap
-path: /Users/mike/wiki/bluetooth-q30-hfp-trap.md
+path: ~/wiki/bluetooth-q30-hfp-trap.md
 tags: audio, evidence
 ```
 
@@ -75,7 +75,7 @@ mention   → the-duplex-device            The Duplex Device
 
 $ agentwiki rm q30-probe-run --reason "superseded by the duplex device"
 tombstoned q30-probe-run (superseded by the duplex device)
-the file is untouched at /Users/mike/wiki/q30-probe-run.md; restore with: agentwiki restore q30-probe-run
+the file is untouched at ~/wiki/q30-probe-run.md; restore with: agentwiki restore q30-probe-run
 ```
 
 Artifacts are versioned by content hash, so a published version can be cited
@@ -88,12 +88,12 @@ published q30-probe@9d9e5b1f6ef6
 bundle, 2 files, 129 B
 latest   /a/q30-probe/
 version  /a/q30-probe/v/9d9e5b1f6ef6aabad723b14d9b134354c72a8d48140b4fe58e90b2c9bf52b672/
-stub     /Users/mike/wiki/artifacts/q30-probe.md
+stub     ~/wiki/artifacts/q30-probe.md
 ```
 
-`serve` is on demand and holds no daemon: it binds loopback, serves static
-bytes and rendered markdown, and never executes anything for a request. Every
-other command works with it down.
+`serve` is on demand and holds no daemon: loopback only, static bytes and
+rendered markdown, no server-side execution. Every other command works with
+it down.
 
 ## For agents
 
@@ -102,12 +102,6 @@ agentwiki --agent-teaser    # one line
 agentwiki --agent-help      # the runbook: read commands first, then writes
 agentwiki guide --json      # the stable machine-readable card
 ```
-
-`--json` emits the `{schema_version, ok, error, data}` envelope; `--jsonl`
-streams one record per line for `list`, `search`, `resolve` and
-`artifacts list`. Domain failures are `ok:false` envelopes on stdout with exit
-1; usage faults print help to stderr with exit 2 and are never envelopes.
-Error codes are snake_case and carry a `recovery` spelled as a command to run.
 
 The two habits worth building: take the `path` and edit the file rather than
 round-tripping text through the CLI, and call `resolve` instead of guessing
@@ -131,5 +125,5 @@ bun run check          # lint + typecheck + test
 bash scripts/smoke.sh  # every command end to end, throwaway HOME and vault
 ```
 
-Tests use temp directories only — no network, no fixed home paths. Run the
-smoke script before finishing anything that touches the command surface.
+Tests use temp directories only — no network, no fixed home paths. Set
+`AGENTWIKI_DEBUG` to any value to print a stack trace alongside a failure.
