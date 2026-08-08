@@ -8,7 +8,10 @@ BIN_DIR="${AGENTWIKI_INSTALL_BIN_DIR:-$HOME/.local/bin}"
 STATE_DIR="${AGENTWIKI_INSTALL_STATE_DIR:-$HOME/.local/state/agentwiki}"
 TARGET="$BIN_DIR/agentwiki"
 RECEIPT="$STATE_DIR/deployed-sha"
-EXPECTED_ORIGIN="git@github.com:possibilities/agentwiki.git"
+UPSTREAM_ORIGIN="git@github.com:possibilities/agentwiki.git"
+# A fork installs from its own checkout, so the origin this refuses to
+# install from has to be overridable; the upstream spelling is the default.
+EXPECTED_ORIGIN="${AGENTWIKI_INSTALL_EXPECTED_ORIGIN:-$UPSTREAM_ORIGIN}"
 TMP_PATH=""
 
 cleanup() {
@@ -142,10 +145,10 @@ normalized_origin() {
   origin="${origin%/}"
   case "$origin" in
     https://github.com/possibilities/agentwiki|https://github.com/possibilities/agentwiki.git)
-      printf '%s\n' "$EXPECTED_ORIGIN"
+      printf '%s\n' "$UPSTREAM_ORIGIN"
       ;;
     git@github.com:possibilities/agentwiki|git@github.com:possibilities/agentwiki.git|ssh://git@github.com/possibilities/agentwiki|ssh://git@github.com/possibilities/agentwiki.git)
-      printf '%s\n' "$EXPECTED_ORIGIN"
+      printf '%s\n' "$UPSTREAM_ORIGIN"
       ;;
     *)
       printf '%s\n' "$origin"
