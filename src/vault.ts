@@ -195,10 +195,6 @@ function humanizeFilename(path: string): string {
   return name.replace(/[-_]+/g, " ").trim() || path;
 }
 
-export function documentPathFor(root: string, slug: string, extension: string): string {
-  return join(root, `${slug}${extension}`);
-}
-
 export function artifactStubPath(root: string, name: string): string {
   return join(root, ARTIFACT_DIRECTORY, `${slugify(name)}.md`);
 }

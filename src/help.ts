@@ -39,6 +39,8 @@ Global options:
   --json             Emit the stable JSON envelope
   --jsonl            Emit newline-delimited records (list, search, resolve, artifacts list)
   --help, -h         Show this help
+
+Top-level options (before any command):
   --version, -V      Show the version
   --agent-help       Show the agent runbook
   --agent-teaser     Show a one-line capability summary

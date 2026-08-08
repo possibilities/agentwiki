@@ -84,6 +84,12 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
         flag: "--jsonl",
         meaning: "Emit newline-delimited records (list, search, resolve, artifacts list)",
       },
+      { flag: "--help", meaning: "Show help for the command" },
+    ],
+    /** Read off argv[0] before any command dispatch, so `agentwiki search foo
+     * --agent-help` is a usage fault, not a runbook. */
+    top_level_flags: [
+      { flag: "--version, -V", meaning: "Print the version" },
       { flag: "--agent-help", meaning: "Agent runbook" },
       { flag: "--agent-teaser", meaning: "One-line capability summary" },
     ],
