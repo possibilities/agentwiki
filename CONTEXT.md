@@ -29,3 +29,18 @@ document graph (backlinks, tags, search). _Avoid_: catalog entry.
 
 **Tombstone** — the removal marker; nothing is silently deleted, and restore is possible until
 `gc` collects tombstoned content. _Avoid_: delete (as a verb for what `rm` does).
+
+**Reconcile** — the incremental size/mtime pass every read command runs before querying the
+index, so a file an agent edited by hand is already visible. _Avoid_: sync, refresh.
+
+**Mention** — the soft edge kind: one document's title appearing verbatim in another's body,
+word-bounded and outside code. _Avoid_: implicit link, backlink (which is a direction, not a kind).
+
+**Dangling** — a wikilink target that resolves to nothing, or ambiguously to several documents.
+_Avoid_: broken link.
+
+**Latest pointer** — the mutable per-name reference to an artifact version, behind `/a/<name>/`.
+The version it names is still immutable. _Avoid_: head, current.
+
+**Envelope** — the `{schema_version, ok, error, data}` object `--json` emits. _Avoid_: response,
+payload.
