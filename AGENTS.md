@@ -24,6 +24,22 @@ Three things a listing will not tell you:
 - `src/envelope.ts`, `src/errors.ts`, `src/flags.ts`, `src/paths.ts` are the
   shared CLI core, copied byte-identical into agentboard.
 
+## The skill
+
+`skills/wiki/SKILL.md` is the canonical deep runbook for driving this CLI, and
+the surface most agent sessions actually see: Funk's skills scanner installs it
+globally with `npx skills add` against this checkout, discovering it by the
+nested `skills/<name>/SKILL.md` layout, so every session lists its name and
+frontmatter description whether or not the binary is ever run. `--agent-help`
+stays as the in-binary fallback and points at it.
+
+The skill documents the CLI as installed, grounded in real command output.
+Changing the command surface means re-verifying its claims against the live
+CLI before editing its prose — reads against the real vault, writes against a
+throwaway `AGENTWIKI_VAULT` (and `XDG_DATA_HOME`, which is what scopes the
+artifact store) — and keeping the description's trigger phrasing true, since
+that description is all a session has to route on.
+
 ## Load-bearing decisions
 
 `docs/adr/` records them, one file each: files are the source of truth,

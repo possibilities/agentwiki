@@ -264,6 +264,13 @@ describe("the agent surface", () => {
     expect(result.stdout).toContain("usage faults print help to stderr with exit 2");
   });
 
+  test("the runbook points at the wiki skill as the deeper runbook", () => {
+    const result = run(["--agent-help"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("the wiki agent skill");
+    expect(result.stdout).toContain("in-binary fallback");
+  });
+
   test("the guide is machine readable and names the storage it uses", () => {
     const { status, body } = envelope(["guide", "--json"]);
     expect(status).toBe(0);

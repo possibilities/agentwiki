@@ -124,6 +124,7 @@ Contract
   and are never envelopes. Error codes are snake_case and carry a recovery
   where one exists.
 
+Deep runbook: the wiki agent skill; this text is the in-binary fallback.
 Full machine-readable card: agentwiki guide --json
 `;
 
