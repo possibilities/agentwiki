@@ -27,6 +27,23 @@ describe("resolveRef tiers", () => {
     expect(resolveRef("hfp trap", VAULT).slug).toBe("bluetooth-q30-hfp-trap");
   });
 
+  test("spoken words resolve even with the middle of the title dropped", () => {
+    expect(resolveRef("the bluetooth trap", VAULT).slug).toBe("bluetooth-q30-hfp-trap");
+    expect(resolveRef("bluetooth trap", VAULT).slug).toBe("bluetooth-q30-hfp-trap");
+  });
+
+  test("words out of order do not resolve", () => {
+    expect(() => resolveRef("trap bluetooth", VAULT)).toThrow(CliError);
+  });
+
+  test("a contiguous match outranks a scattered one", () => {
+    const vault = [
+      { slug: "release-notes", title: "Release notes" },
+      { slug: "release-and-deploy-notes", title: "Release and deploy notes" },
+    ];
+    expect(resolveRef("release notes", vault).slug).toBe("release-notes");
+  });
+
   test("an exact slug is never beaten by a fuzzy match on another document", () => {
     const vault = [
       { slug: "notes", title: "Notes" },

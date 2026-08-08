@@ -52,10 +52,13 @@ Each has an ADR under `docs/adr/`.
   reclaims, explicitly.
 - **No daemon.** `serve` runs on demand; every other command works without it.
 - **Refs resolve in tiers, and ambiguity is an error.** Exact slug, exact
-  title, case- and article-insensitive, then unambiguous fuzzy contains — the
-  first tier that matches wins, and two matches inside a tier is
-  `ambiguous_ref` naming the candidates. Wikilinks skip the fuzzy tier: a
-  typed link that nearly matches must surface as dangling, not guess.
+  title, case- and article-insensitive, unambiguous fuzzy contains, then the
+  spoken words present in order — the first tier that matches wins, and two
+  matches inside a tier is `ambiguous_ref` naming the candidates. The last
+  tier is what makes "the bluetooth trap" find `bluetooth-q30-hfp-trap`;
+  it requires the words in order so a rearrangement never resolves. Wikilinks
+  stop after the normalized tier: a typed link that nearly matches must
+  surface as dangling, not guess.
 
 ## Conventions
 

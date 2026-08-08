@@ -78,8 +78,9 @@ Reading (safe anytime)
   agentwiki links <ref> · graph · tags · doctor
 
   A <ref> resolves in tiers: exact slug, exact title, case- and article-
-  insensitive match, then unambiguous fuzzy contains. Two matches in a tier is
-  an ambiguous_ref error naming the candidates — re-ask with a slug.
+  insensitive match, unambiguous fuzzy contains, then the spoken words present
+  in order ("the bluetooth trap" finds bluetooth-q30-hfp-trap). Two matches in
+  a tier is an ambiguous_ref error naming the candidates — re-ask with a slug.
 
 Writing (files change on disk)
   agentwiki new "Bluetooth Q30 HFP trap" --tags evidence,audio

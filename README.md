@@ -1,23 +1,135 @@
 # agentwiki
 
-Agent-first document store: a plain-file vault with an embedded search index,
-plus versioned immutable artifacts — gist/obsidian-flavored, built for agents
-driven by humans (often by voice).
+Agent-first document store: a vault of plain text files that is the source of
+truth, a derived full-text index, a wikilink graph, and immutable
+content-addressed artifacts served statically on demand. Gist- and
+obsidian-flavored, built for agents driven by humans — often by voice.
+
+Files are truth. Agents get the path and edit vault files with their ordinary
+tools; the index reconciles itself on every read, and deleting it loses
+nothing. [docs/adr/](docs/adr/) records the decisions, starting with
+[files are the source of truth](docs/adr/0001-files-are-the-source-of-truth.md);
+`CONTEXT.md` is the domain glossary.
 
 ## Install
 
-```sh
-bash scripts/install.sh
+Requires Bun 1.3.14.
+
+```bash
+./scripts/install.sh
 ```
+
+Links `$HOME/.local/bin/agentwiki` to this checkout and writes the deployed Git
+SHA to `~/.local/state/agentwiki/deployed-sha`. Set
+`AGENTWIKI_INSTALL_BIN_DIR` and `AGENTWIKI_INSTALL_STATE_DIR` to override the
+install locations; `./scripts/install.sh --uninstall` removes both.
 
 ## Use
 
-Landing with the build. `agentwiki --agent-help` is the agent runbook;
-`agentwiki guide --json` is the machine-readable card.
+The vault defaults to `~/wiki` and is created on first write; `--vault <path>`
+wins over `AGENTWIKI_VAULT`, which wins over that default.
+
+```bash
+agentwiki new "Bluetooth Q30 HFP trap" --tags evidence,audio
+cat probe.md | agentwiki add --title "Q30 probe run" --tags evidence
+agentwiki search "bluetooth hfp" --json
+agentwiki path bluetooth-q30-hfp-trap        # then edit that file directly
+agentwiki backlinks bluetooth-q30-hfp-trap
+agentwiki publish ./dist --name q30-probe --kind bundle
+agentwiki serve                              # http://127.0.0.1:7777
+```
+
+Every `<ref>` accepts a slug, an exact title, or an unambiguous spoken phrase,
+so a voice agent can say what it means:
+
+```console
+$ agentwiki get "the bluetooth trap" --meta-only
+# Bluetooth Q30 HFP trap
+slug: bluetooth-q30-hfp-trap
+path: /Users/mike/wiki/bluetooth-q30-hfp-trap.md
+tags: audio, evidence
+```
+
+A phrase that matches several documents is an error that names them, and
+`resolve` turns the same phrase into ranked candidates the agent can read back:
+
+```console
+$ agentwiki get "duplex" --json
+{"schema_version":1,"ok":false,"error":{"code":"ambiguous_ref",
+ "message":"\"duplex\" matches 2 documents: the-duplex-device, duplex-device-probe",
+ "recovery":"Use one of those slugs, or run: agentwiki resolve \"duplex\" --json"},"data":null}
+
+$ agentwiki resolve "duplex"
+fuzzy       the-duplex-device            The Duplex Device
+fuzzy       duplex-device-probe          Duplex device probe
+```
+
+Wikilinks and title mentions both become graph edges, and nothing is silently
+deleted — `rm` stamps a tombstone into frontmatter and leaves the file where
+inbound links already point:
+
+```console
+$ agentwiki links q30-probe-run
+wikilink  → bluetooth-q30-hfp-trap       Bluetooth Q30 HFP trap
+mention   → the-duplex-device            The Duplex Device
+
+$ agentwiki rm q30-probe-run --reason "superseded by the duplex device"
+tombstoned q30-probe-run (superseded by the duplex device)
+the file is untouched at /Users/mike/wiki/q30-probe-run.md; restore with: agentwiki restore q30-probe-run
+```
+
+Artifacts are versioned by content hash, so a published version can be cited
+forever. `publish` also writes a stub document into the vault, which is what
+puts artifacts inside the searchable, linkable document graph:
+
+```console
+$ agentwiki publish ./dist --name q30-probe --kind bundle
+published q30-probe@9d9e5b1f6ef6
+bundle, 2 files, 129 B
+latest   /a/q30-probe/
+version  /a/q30-probe/v/9d9e5b1f6ef6aabad723b14d9b134354c72a8d48140b4fe58e90b2c9bf52b672/
+stub     /Users/mike/wiki/artifacts/q30-probe.md
+```
+
+`serve` is on demand and holds no daemon: it binds loopback, serves static
+bytes and rendered markdown, and never executes anything for a request. Every
+other command works with it down.
+
+## For agents
+
+```bash
+agentwiki --agent-teaser    # one line
+agentwiki --agent-help      # the runbook: read commands first, then writes
+agentwiki guide --json      # the stable machine-readable card
+```
+
+`--json` emits the `{schema_version, ok, error, data}` envelope; `--jsonl`
+streams one record per line for `list`, `search`, `resolve` and
+`artifacts list`. Domain failures are `ok:false` envelopes on stdout with exit
+1; usage faults print help to stderr with exit 2 and are never envelopes.
+Error codes are snake_case and carry a `recovery` spelled as a command to run.
+
+The two habits worth building: take the `path` and edit the file rather than
+round-tripping text through the CLI, and call `resolve` instead of guessing
+when a phrase might mean more than one document.
+
+## Storage
+
+| What | Where | Authority |
+| --- | --- | --- |
+| Documents | `~/wiki/` (`--vault`, `AGENTWIKI_VAULT`) | the source of truth |
+| Index | `<vault>/.agentwiki/index.sqlite3` | derived; `reindex` rebuilds it |
+| Templates | `<vault>/.agentwiki/templates/` | optional, for `new --template` |
+| Artifact bytes | `~/.local/share/agentwiki/cas/` | immutable, content addressed |
+| Artifact manifest | `~/.local/share/agentwiki/manifest.sqlite3` | authoritative; not rebuildable |
 
 ## Develop
 
-```sh
+```bash
 bun install
-bun run check   # lint + typecheck + test
+bun run check          # lint + typecheck + test
+bash scripts/smoke.sh  # every command end to end, throwaway HOME and vault
 ```
+
+Tests use temp directories only — no network, no fixed home paths. Run the
+smoke script before finishing anything that touches the command surface.

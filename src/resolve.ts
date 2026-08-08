@@ -4,7 +4,7 @@ import { slugify } from "./slug.ts";
 /** A ref is whatever a human said out loud. Resolution walks from the most
  * literal reading to the loosest, and stops at the first tier that matches —
  * a fuzzy hit never competes with an exact slug. */
-export type MatchTier = "slug" | "title" | "normalized" | "fuzzy";
+export type MatchTier = "slug" | "title" | "normalized" | "fuzzy" | "words";
 
 export interface RefCandidate {
   slug: string;
@@ -17,8 +17,14 @@ export interface RefMatch<T extends RefCandidate> {
   score: number;
 }
 
-const TIER_ORDER: readonly MatchTier[] = ["slug", "title", "normalized", "fuzzy"];
-const TIER_SCORE: Record<MatchTier, number> = { slug: 100, title: 90, normalized: 80, fuzzy: 60 };
+const TIER_ORDER: readonly MatchTier[] = ["slug", "title", "normalized", "fuzzy", "words"];
+const TIER_SCORE: Record<MatchTier, number> = {
+  slug: 100,
+  title: 90,
+  normalized: 80,
+  fuzzy: 60,
+  words: 40,
+};
 
 const LEADING_ARTICLE = /^(?:a|an|the)-/;
 
@@ -27,15 +33,32 @@ function normalizeRef(value: string): string {
   return slugify(value).replace(LEADING_ARTICLE, "");
 }
 
+/** People drop the middle of a title, not just its article: "the bluetooth
+ * trap" is how someone asks for bluetooth-q30-hfp-trap out loud. Requiring
+ * the spoken words in order keeps this from matching a rearrangement. */
+function wordsInOrder(needle: string, haystack: string): boolean {
+  const wanted = needle.split("-").filter((word) => word !== "");
+  if (wanted.length < 2) return false;
+  const available = haystack.split("-");
+  let at = 0;
+  for (const word of wanted) {
+    const found = available.indexOf(word, at);
+    if (found === -1) return false;
+    at = found + 1;
+  }
+  return true;
+}
+
 function tierOf(ref: string, candidate: RefCandidate): MatchTier | null {
   if (candidate.slug === ref) return "slug";
   if (candidate.title === ref) return "title";
   const normalized = normalizeRef(ref);
   if (normalized === "") return null;
-  if (normalizeRef(candidate.slug) === normalized) return "normalized";
-  if (normalizeRef(candidate.title) === normalized) return "normalized";
-  if (normalizeRef(candidate.slug).includes(normalized)) return "fuzzy";
-  if (normalizeRef(candidate.title).includes(normalized)) return "fuzzy";
+  const slug = normalizeRef(candidate.slug);
+  const title = normalizeRef(candidate.title);
+  if (slug === normalized || title === normalized) return "normalized";
+  if (slug.includes(normalized) || title.includes(normalized)) return "fuzzy";
+  if (wordsInOrder(normalized, slug) || wordsInOrder(normalized, title)) return "words";
   return null;
 }
 

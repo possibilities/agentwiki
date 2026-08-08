@@ -32,6 +32,7 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
         "exact title",
         "case- and article-insensitive",
         "unambiguous fuzzy contains",
+        "spoken words present in order",
       ],
       ambiguity: "ambiguous_ref error naming the candidates",
       disambiguation_command: "agentwiki resolve <phrase> --json",
