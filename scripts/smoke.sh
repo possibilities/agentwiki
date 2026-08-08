@@ -2,9 +2,7 @@
 set -euo pipefail
 
 # End-to-end smoke test: exercises every documented agentwiki command against
-# a throwaway HOME and vault. Written against the documented command surface
-# (see the task that produced this file); the CLI itself lands separately, so
-# a fresh run may fail partway through until that lands.
+# a throwaway HOME and vault.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
