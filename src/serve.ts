@@ -299,6 +299,12 @@ function serveFileAt(
       "Content-Type": mediaType,
       "Cache-Control": cacheControl,
       "X-Content-Type-Options": "nosniff",
+      // Artifact bytes are arbitrary published content. The opaque origin
+      // this forces is the point: a page artifact's script can no longer
+      // reach /d/<slug> or the origin's storage. allow-scripts is kept
+      // because page, bundle and render artifacts are expected to run their
+      // own JS — isolating the origin, not disabling the artifact.
+      "Content-Security-Policy": "sandbox allow-scripts",
     },
     Bun.file(path),
   );
@@ -318,8 +324,9 @@ interface ResolvedObjectPath {
  * object root, and — because `lstat` only refuses to follow a symlink in
  * the *last* path component, never an earlier one — lstat every segment on
  * the way down so a symlinked intermediate directory can't smuggle the walk
- * outside the store either. */
-function resolveObjectPath(objectRoot: string, subPath: string): ResolvedObjectPath | null {
+ * outside the store either. Exported for the traversal test — nothing else
+ * outside this module calls it. */
+export function resolveObjectPath(objectRoot: string, subPath: string): ResolvedObjectPath | null {
   const root = resolve(objectRoot);
   const rootStats = statOrNull(root);
   if (rootStats === null) return null;
