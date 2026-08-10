@@ -10,16 +10,29 @@ import { CliError, UsageError } from "./errors.ts";
 import type { ParsedFlags } from "./flags.ts";
 import { editFrontmatter } from "./frontmatter.ts";
 import { normalizeTags, parseTagList } from "./slug.ts";
-import { absolute, DEFAULT_PORT, latestArtifactUrl, versionArtifactUrl } from "./urls.ts";
+import {
+  absolute,
+  DEFAULT_ARTIFACT_PORT,
+  DEFAULT_PORT,
+  latestArtifactUrl,
+  versionArtifactUrl,
+} from "./urls.ts";
 import { artifactStubPath } from "./vault.ts";
 
-export function portOf(flags: ParsedFlags): number {
-  const raw = flags.values["port"];
-  if (raw === undefined) return DEFAULT_PORT;
+function portValue(raw: string | undefined, fallback: number, flag: string): number {
+  if (raw === undefined) return fallback;
   const port = Number(raw);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
-    throw new UsageError("--port must be 1..65535");
+    throw new UsageError(`${flag} must be 1..65535`);
   return port;
+}
+
+export function portOf(flags: ParsedFlags): number {
+  return portValue(flags.values["port"], DEFAULT_PORT, "--port");
+}
+
+export function artifactPortOf(flags: ParsedFlags): number {
+  return portValue(flags.values["artifact-port"], DEFAULT_ARTIFACT_PORT, "--artifact-port");
 }
 
 function kindOf(flags: ParsedFlags): ArtifactKind | undefined {

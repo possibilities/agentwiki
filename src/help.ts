@@ -115,6 +115,12 @@ Serving (no daemon)
                                              /a/<name>/v/<hash>/ URLs are safe
                                              to cite; /a/<name>/ tracks latest;
                                              /d/<slug> renders a document.
+                                             Artifacts answer on their own
+                                             origin (--artifact-port, default
+                                             7778) so their scripts reach
+                                             neither the vault nor the network;
+                                             /a/… on the document port
+                                             redirects there.
   agentwiki open <name>                      Errors with a recovery if serve
                                              is not already running.
 
@@ -242,10 +248,16 @@ tombstoned. Manifest rows survive, marked reclaimed.`,
 
   serve: `agentwiki serve — serve documents and artifacts on demand
 
-  --port <n>          Listen port (default 7777)
+  --port <n>              Document listen port (default 7777)
+  --artifact-port <n>     Artifact listen port (default 7778)
 
 Localhost only, static bytes only, no server-side execution, no daemon. Every
-other command works without it.`,
+other command works without it.
+
+Artifacts bind the second port so they land on an origin of their own: their
+scripts cannot read /d/<slug> or reach the network, and a bundle can still
+load and fetch its own files. Cited /a/… paths keep working — the document
+port redirects them.`,
 
   guide: "agentwiki guide — print the stable machine-readable agent contract (use --json)",
 

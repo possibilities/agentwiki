@@ -43,8 +43,8 @@ that description is all a session has to route on.
 ## Load-bearing decisions
 
 `docs/adr/` records them, one file each: files are the source of truth,
-artifacts are immutable, serving is on demand, tombstones never delete, and
-refs resolve in tiers.
+artifacts are immutable, serving is on demand, tombstones never delete, refs
+resolve in tiers, and artifacts get their own origin.
 
 ## Conventions
 

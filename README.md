@@ -38,7 +38,7 @@ agentwiki search "bluetooth hfp" --json
 agentwiki path bluetooth-q30-hfp-trap        # then edit that file directly
 agentwiki backlinks bluetooth-q30-hfp-trap
 agentwiki publish ./dist --name q30-probe --kind bundle
-agentwiki serve                              # http://127.0.0.1:7777
+agentwiki serve                              # docs :7777, artifacts :7778
 ```
 
 Every `<ref>` accepts a slug, an exact title, or an unambiguous spoken phrase,
@@ -96,6 +96,11 @@ stub     ~/wiki/artifacts/q30-probe.md
 `serve` is on demand and holds no daemon: loopback only, static bytes and
 rendered markdown, no server-side execution. Every other command works with
 it down.
+
+Artifacts answer on a second loopback port (`--artifact-port`, default 7778)
+so they get an origin of their own: an artifact's scripts can load and fetch
+its own files, and can reach neither the documents on `:7777` nor the network.
+Cited `/a/…` paths are unaffected — the document port redirects them.
 
 ## For agents
 

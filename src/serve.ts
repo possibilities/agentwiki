@@ -28,41 +28,127 @@ export interface ServeOptions {
   index: VaultIndex;
   store: ArtifactStore;
   port: number;
+  artifactPort: number;
   host: string;
 }
 
 export interface RunningServer {
   port: number;
+  artifactPort: number;
   url: string;
+  artifactUrl: string;
   stop(): void;
 }
 
 const NO_CACHE = "no-cache";
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
+/** Artifact bytes are arbitrary published content, so the isolation is the
+ * origin itself: they bind their own loopback port, which leaves the vault's
+ * documents cross-origin and unreadable while making `'self'` mean this
+ * artifact's own origin — so a bundle can still load and fetch its own files,
+ * and storage no longer throws the way it did under an opaque origin.
+ *
+ * Inside that origin the policy is deliberately permissive — inline script,
+ * eval, data: and blob: — because a page, bundle or render is expected to run
+ * its own JS. What it may not do is reach the network: `connect-src 'self'`
+ * denies the document origin, every other loopback port, and the internet, so
+ * a hostile artifact has nowhere to send what it can see.
+ *
+ * The residual risk is that artifacts share this one origin with each other:
+ * storage and fetch are common between them. That is the trade for giving
+ * them a real origin at all, and it keeps the vault — the part worth
+ * protecting — on the other side of an origin boundary. */
+const ARTIFACT_CSP = [
+  "default-src 'none'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:",
+  "style-src 'self' 'unsafe-inline' data:",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "media-src 'self' data: blob:",
+  "connect-src 'self'",
+  "frame-src 'self'",
+  "worker-src 'self' blob:",
+  "form-action 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 export function startServer(options: ServeOptions): RunningServer {
-  const server = Bun.serve({
+  // The document origin is only known once its listener is up, and the
+  // artifact origin the same — each server needs the other's address for one
+  // courtesy hop, so the bindings are filled in after both are listening and
+  // read at request time.
+  let documentOrigin = "";
+  let artifactOrigin = "";
+
+  const artifactServer = Bun.serve({
+    port: options.artifactPort,
+    hostname: options.host,
+    fetch: (request) => routeArtifacts(request, options, () => documentOrigin),
+  });
+  const documentServer = Bun.serve({
     port: options.port,
     hostname: options.host,
-    fetch: (request) => route(request, options),
+    fetch: (request) => routeDocuments(request, options, () => artifactOrigin),
   });
+
   // Only undefined for a unix-socket server; we always bind a TCP port.
-  const port = server.port ?? options.port;
+  const port = documentServer.port ?? options.port;
+  const artifactPort = artifactServer.port ?? options.artifactPort;
+  documentOrigin = origin(port, options.host);
+  artifactOrigin = origin(artifactPort, options.host);
+
   return {
     port,
-    url: origin(port, options.host),
-    stop: () => server.stop(true),
+    artifactPort,
+    url: documentOrigin,
+    artifactUrl: artifactOrigin,
+    stop: () => {
+      documentServer.stop(true);
+      artifactServer.stop(true);
+    },
   };
 }
 
-async function route(request: Request, options: ServeOptions): Promise<Response> {
+async function routeDocuments(
+  request: Request,
+  options: ServeOptions,
+  artifactOrigin: () => string,
+): Promise<Response> {
   try {
     if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed(request);
     const url = new URL(request.url);
     const pathname = url.pathname;
     if (pathname === "/") return handleIndex(request, options);
     if (pathname.startsWith("/d/")) return handleDocument(request, options, pathname.slice(3));
+    // Every artifact URL ever cited is a path, written into stub documents and
+    // envelopes before the origins split. This hop is what keeps all of them
+    // resolving from the front door — temporary, because the artifact port is
+    // configurable and a cached permanent redirect would outlive the setting.
+    if (pathname.startsWith("/a/")) {
+      return redirect(request, `${artifactOrigin()}${pathname}${url.search}`, 302);
+    }
+    return notFound(request);
+  } catch (error) {
+    console.error("agentwiki serve: request failed:", error);
+    return respond(request, 500, htmlHeaders(NO_CACHE), errorPage(500, "internal server error"));
+  }
+}
+
+async function routeArtifacts(
+  request: Request,
+  options: ServeOptions,
+  documentOrigin: () => string,
+): Promise<Response> {
+  try {
+    if (request.method !== "GET" && request.method !== "HEAD") return methodNotAllowed(request);
+    const url = new URL(request.url);
+    const pathname = url.pathname;
     if (pathname.startsWith("/a/")) return handleArtifact(request, options, pathname, url.search);
+    // Nothing else lives here: a human who lands on the artifact origin's root
+    // wanted the vault, which is on the other one.
+    if (pathname === "/") return redirect(request, `${documentOrigin()}/`, 302);
     return notFound(request);
   } catch (error) {
     console.error("agentwiki serve: request failed:", error);
@@ -299,12 +385,7 @@ function serveFileAt(
       "Content-Type": mediaType,
       "Cache-Control": cacheControl,
       "X-Content-Type-Options": "nosniff",
-      // Artifact bytes are arbitrary published content. The opaque origin
-      // this forces is the point: a page artifact's script can no longer
-      // reach /d/<slug> or the origin's storage. allow-scripts is kept
-      // because page, bundle and render artifacts are expected to run their
-      // own JS — isolating the origin, not disabling the artifact.
-      "Content-Security-Policy": "sandbox allow-scripts",
+      "Content-Security-Policy": ARTIFACT_CSP,
     },
     Bun.file(path),
   );
@@ -404,6 +485,11 @@ function methodNotAllowed(request: Request): Response {
   );
 }
 
-function redirect(request: Request, location: string): Response {
-  return respond(request, 301, { Location: location, "X-Content-Type-Options": "nosniff" }, null);
+function redirect(request: Request, location: string, status = 301): Response {
+  return respond(
+    request,
+    status,
+    { Location: location, "X-Content-Type-Options": "nosniff" },
+    null,
+  );
 }

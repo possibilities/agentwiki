@@ -225,6 +225,12 @@ behind. Every other command works with the server down.
 | `/d/<slug>` | renders a document as HTML (tombstoned → 404) |
 | `/` | the document index |
 
+Two origins, one process: documents on `--port` (7777), artifact bytes on
+`--artifact-port` (7778). Artifacts get an origin of their own so their
+scripts can use storage and load and fetch their own files, while reaching
+neither the documents nor the network — `/a/…` on the document port is a
+redirect there, so every path in this table is still the one to cite.
+
 `open` looks the artifact up before probing the port, so a name with no live
 version is `artifact_not_found` — `server_not_running` (with the exact `serve`
 command as its recovery) only appears once the artifact exists. `open` will
@@ -381,5 +387,5 @@ When the user wants to read rather than delegate, `agentwiki serve` gives them
 a browsable local site — the document index at `/`, rendered markdown at
 `/d/<slug>`, and every artifact at its own URL — and `agentwiki open <name>`
 launches one in their browser. Suggest it after publishing something a person
-is going to want to look at, and tell them it is loopback-only and stops with
-ctrl-c.
+is going to want to look at, and tell them it is loopback-only, binds two
+ports, and stops with ctrl-c.

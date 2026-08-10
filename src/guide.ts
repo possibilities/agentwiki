@@ -2,7 +2,7 @@ import { ARTIFACT_KINDS, MAX_ARTIFACT_BYTES } from "./artifacts.ts";
 import { VERSION } from "./help.ts";
 import { INDEX_SCHEMA_VERSION } from "./index.ts";
 import { MIN_MENTION_LENGTH } from "./links.ts";
-import { DEFAULT_PORT } from "./urls.ts";
+import { DEFAULT_ARTIFACT_PORT, DEFAULT_PORT } from "./urls.ts";
 import { DEFAULT_VAULT } from "./vault.ts";
 
 /** The card an agent reads once, before it knows anything else. Stable shape:
@@ -73,6 +73,10 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
       host: "loopback only",
       execution: "none — static bytes and rendered markdown only",
       daemon: "no; every other command works without the server",
+      document_port: DEFAULT_PORT,
+      artifact_port: DEFAULT_ARTIFACT_PORT,
+      artifact_isolation:
+        "artifacts answer on their own origin, so their scripts can read neither /d/<slug> nor the network; /a/… on the document port redirects there",
     },
     global_flags: [
       {
@@ -148,7 +152,11 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
         effect: "launches a browser; requires serve",
       },
       { name: "gc", usage: "gc", effect: "deletes tombstoned artifact bytes" },
-      { name: "serve", usage: "serve [--port n]", effect: "blocks; localhost static server" },
+      {
+        name: "serve",
+        usage: "serve [--port n] [--artifact-port n]",
+        effect: "blocks; localhost static server, artifacts on their own origin",
+      },
       { name: "guide", usage: "guide --json", effect: "this card" },
     ],
   };

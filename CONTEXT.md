@@ -44,3 +44,8 @@ The version it names is still immutable. _Avoid_: head, current.
 
 **Envelope** — the `{schema_version, ok, error, data}` object `--json` emits. _Avoid_: response,
 payload.
+
+**Artifact origin** — the second loopback port `serve` binds (`--artifact-port`, default 7778),
+which serves artifact bytes and nothing else. Its whole job is to be a different origin from the
+documents, so the browser keeps an artifact's scripts away from the vault. _Avoid_: artifact
+server, sandbox, static host.

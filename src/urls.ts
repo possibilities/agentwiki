@@ -3,6 +3,10 @@
  * later, so the shapes live here rather than in whichever module builds one. */
 
 export const DEFAULT_PORT = 7777;
+/** Artifact bytes bind a second loopback port so they land on an origin of
+ * their own — the isolation serve.ts relies on. Paths are unchanged, so a
+ * citation written before the split still resolves. */
+export const DEFAULT_ARTIFACT_PORT = 7778;
 export const DEFAULT_HOST = "127.0.0.1";
 
 /** Moves as new versions land: what a human wants bookmarked. */

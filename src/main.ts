@@ -25,7 +25,14 @@ import type { FlagSpec, ParsedFlags } from "./flags.ts";
 import { parseFlags } from "./flags.ts";
 import { buildGuide } from "./guide.ts";
 import { AGENT_HELP, AGENT_TEASER, HELP, TOP_HELP, VERSION } from "./help.ts";
-import { artifactsCommand, gcCommand, openCommand, portOf, publishCommand } from "./publish.ts";
+import {
+  artifactPortOf,
+  artifactsCommand,
+  gcCommand,
+  openCommand,
+  portOf,
+  publishCommand,
+} from "./publish.ts";
 import { startServer } from "./serve.ts";
 import { absolute, DEFAULT_HOST } from "./urls.ts";
 import { resolveVaultRoot } from "./vault.ts";
@@ -65,7 +72,7 @@ const REGISTRY: Record<string, CommandDefinition> = {
   artifacts: { value: ["--reason", "--version"], run: artifactsCommand },
   open: { value: ["--port"], run: openCommand },
   gc: { run: gcCommand },
-  serve: { value: ["--port"], run: serveCommand },
+  serve: { value: ["--port", "--artifact-port"], run: serveCommand },
   guide: { run: guideCommand },
 };
 
@@ -87,6 +94,10 @@ function guideCommand(context: Context, flags: ParsedFlags): CommandResult {
 async function serveCommand(context: Context, flags: ParsedFlags): Promise<CommandResult> {
   if (flags.positional.length > 0) throw new UsageError("serve takes no positional arguments");
   const port = portOf(flags);
+  const artifactPort = artifactPortOf(flags);
+  // Two listeners, one process: the same port would simply fail to bind, and
+  // the split is only worth anything if the origins genuinely differ.
+  if (artifactPort === port) throw new UsageError("--artifact-port must differ from --port");
   const index = openIndex(context, { create: false });
   const store = ArtifactStore.open(context.env, context.home);
   const server = startServer({
@@ -95,6 +106,7 @@ async function serveCommand(context: Context, flags: ParsedFlags): Promise<Comma
     index,
     store,
     port,
+    artifactPort,
     host: DEFAULT_HOST,
   });
   const shutdown = (): void => {
@@ -109,11 +121,18 @@ async function serveCommand(context: Context, flags: ParsedFlags): Promise<Comma
   const data = {
     url: server.url,
     port: server.port,
+    artifact_url: server.artifactUrl,
+    artifact_port: server.artifactPort,
     vault: context.vaultRoot,
     documents: absolute(server.port, "/"),
   };
   if (json) console.log(JSON.stringify(success(SCHEMA_VERSION, data)));
-  else console.log(`serving ${context.vaultRoot} at ${server.url}\npress ctrl-c to stop`);
+  else
+    console.log(
+      `serving ${context.vaultRoot} at ${server.url}\n` +
+        `artifacts at ${server.artifactUrl} (their own origin; /a/… on ${server.url} redirects there)\n` +
+        "press ctrl-c to stop",
+    );
   // Bun keeps the process alive for the listening socket; this await simply
   // never resolves, so nothing downstream tries to print a result.
   await new Promise<never>(() => {});
