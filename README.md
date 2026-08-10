@@ -1,4 +1,4 @@
-# agentwiki
+# AgentWiki
 
 [![CI](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml)
 
