@@ -35,9 +35,10 @@ document and the installed binary disagree, the binary wins; see
 - **`--json` on every call.** Domain failures are `ok:false` envelopes on
   stdout with exit 1; usage faults print help to **stderr** with exit 2 and are
   never envelopes. Parse stdout, branch on `error.code`.
-- **`serve` never returns.** It blocks in the foreground for as long as a human
-  is reading. Background it, bound it, or hand the command to the user — never
-  call it inline and wait.
+- **`serve` never returns, and you rarely need it.** A resident launch agent
+  already serves the default vault. Run it by hand only for another vault or
+  port, and then background it, bound it, or hand the command to the user —
+  never call it inline and wait.
 - **Never commit or push the vault yourself.** It is a git repository and it
   maintains itself: every command commits whatever it finds changed — including
   files *you* edited directly — and pushes when a remote exists. Running `git`
@@ -264,13 +265,20 @@ same version hash.
 
 ## Serving
 
+**The default vault is already being served.** `agentwiki.serve` is a resident
+user launch agent, installed by Agentdots with the rest of the fleet's
+services, and it holds both loopback ports from login. You do not start it, and
+you should not `serve` the default vault by hand — the ports are taken.
+
 ```bash
-agentwiki serve --port 7777        # blocks; loopback only; ctrl-c to stop
 agentwiki open q30-probe --json    # opens the latest URL in a browser
+agentwiki serve --vault ~/other --port 7900 --artifact-port 7901
+                                   # by hand only for another vault or port
 ```
 
-Static bytes and rendered markdown, no server-side execution, no daemon left
-behind. Every other command works with the server down.
+Static bytes and rendered markdown, no server-side execution. Every other
+command works with the server down, and the service is the reason
+`server_not_running` is now a rare answer rather than the usual one.
 
 | URL | Behavior |
 |---|---|
@@ -414,6 +422,7 @@ before trusting its prose.
 | Publish a mutable copy and cite `/a/<name>/` | cite `/a/<name>/v/<hash>/` |
 | Republish and assume the tags carried over | repeat `--tag` on every publish |
 | Call `serve` and wait for it to return | it never returns; background it or hand it over |
+| `serve` the default vault to "start" it | a launch agent already holds both ports |
 | `reindex` reflexively after editing a file | reads reconcile; just read |
 | `git -C ~/wiki commit` after writing a document | nothing; the next command commits it |
 | Report that the vault "isn't a git repo" | any write makes it one; `doctor` says what is true |

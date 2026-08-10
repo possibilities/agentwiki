@@ -80,7 +80,8 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
       command: `agentwiki serve --port ${DEFAULT_PORT}`,
       host: "loopback only",
       execution: "none — static bytes and rendered markdown only",
-      daemon: "no; every other command works without the server",
+      daemon:
+        "agentwiki.serve, a user launch agent installed by Agentdots; every other command still works with it stopped",
       document_port: DEFAULT_PORT,
       artifact_port: DEFAULT_ARTIFACT_PORT,
       artifact_isolation:

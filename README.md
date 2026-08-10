@@ -96,7 +96,8 @@ version  /a/q30-probe/v/9d9e5b1f6ef6aabad723b14d9b134354c72a8d48140b4fe58e90b2c9
 stub     ~/wiki/artifacts/q30-probe.md
 ```
 
-`serve` is on demand and holds no daemon: loopback only, static bytes and
+`serve` runs as a resident launch agent for the default vault, installed by
+Agentdots; run it by hand for any other vault. Loopback only, static bytes and
 rendered markdown, no server-side execution. Every other command works with
 it down.
 

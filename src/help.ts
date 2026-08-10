@@ -110,7 +110,7 @@ Artifacts (immutable, content-addressed)
                                              tombstones with the last version.
   agentwiki gc                               The only command that frees bytes.
 
-Serving (no daemon)
+Serving (a resident launch agent)
   agentwiki serve --port 7777                Static bytes, localhost, no
                                              server-side execution. Immutable
                                              /a/<name>/v/<hash>/ URLs are safe
@@ -265,7 +265,9 @@ tombstoned. Manifest rows survive, marked reclaimed.`,
   --port <n>              Document listen port (default 7777)
   --artifact-port <n>     Artifact listen port (default 7778)
 
-Localhost only, static bytes only, no server-side execution, no daemon. Every
+Localhost only, static bytes only, no server-side execution. A resident
+launch agent (agentwiki.serve, installed by Agentdots) already serves the
+default vault; run this by hand for a different vault or port. Every
 other command works without it.
 
 Artifacts bind the second port so they land on an origin of their own: their
