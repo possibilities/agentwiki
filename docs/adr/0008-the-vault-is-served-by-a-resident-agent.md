@@ -3,7 +3,7 @@
 Supersedes [0003 — Serving is on demand; there is no daemon](0003-serve-on-demand.md).
 
 `serve` is now supervised by a user launch agent, `agentwiki.serve`, installed
-by Agentdots along with every other fleet service. It binds both loopback
+by AgentStart along with every other fleet service. It binds both loopback
 origins at login and stays up.
 
 What forced the reversal was evidence rather than preference. ADR 0003's

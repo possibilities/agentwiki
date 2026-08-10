@@ -97,7 +97,7 @@ stub     ~/wiki/artifacts/q30-probe.md
 ```
 
 `serve` runs as a resident launch agent for the default vault, installed by
-Agentdots; run it by hand for any other vault. Loopback only, static bytes and
+AgentStart; run it by hand for any other vault. Loopback only, static bytes and
 rendered markdown, no server-side execution. Every other command works with
 it down.
 

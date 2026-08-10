@@ -266,7 +266,7 @@ same version hash.
 ## Serving
 
 **The default vault is already being served.** `agentwiki.serve` is a resident
-user launch agent, installed by Agentdots with the rest of the fleet's
+user launch agent, installed by AgentStart with the rest of the fleet's
 services, and it holds both loopback ports from login. You do not start it, and
 you should not `serve` the default vault by hand — the ports are taken.
 
