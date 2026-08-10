@@ -1,5 +1,7 @@
 # agentwiki
 
+[![CI](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml)
+
 Agent-first document store: a vault of plain text files that is the source of
 truth, a derived full-text index, a wikilink graph, and immutable
 content-addressed artifacts served statically on demand. Gist- and
