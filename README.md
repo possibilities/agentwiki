@@ -2,15 +2,15 @@
 
 [![CI](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/possibilities/agentwiki/actions/workflows/ci.yml)
 
-Agent-first document store: a vault of plain text files that is the source of
-truth, a derived full-text index, a wikilink graph, and immutable
-content-addressed artifacts served statically on demand. Gist- and
-obsidian-flavored, built for agents driven by humans — often by voice.
+An agent-first document store where plain text files are the truth: full-text
+search, a wikilink graph, and citable published artifacts on top of a vault you
+can edit by hand. Gist- and obsidian-flavored, built for agents driven by
+humans — often by voice.
 
-Files are truth. Agents get the path and edit vault files with their ordinary
-tools; the index reconciles itself on every read, and deleting it loses
-nothing. [docs/adr/](docs/adr/) records the decisions, starting with
-[files are the source of truth](docs/adr/0001-files-are-the-source-of-truth.md);
+Everything else is derived. Agents take a document's path and edit the file
+with their ordinary tools; the index reconciles itself on every read, and
+deleting it loses nothing. [docs/adr/](docs/adr/) records the decisions,
+starting with [files are the source of truth](docs/adr/0001-files-are-the-source-of-truth.md);
 `CONTEXT.md` is the domain glossary.
 
 ## Install
@@ -52,8 +52,8 @@ path: ~/wiki/bluetooth-q30-hfp-trap.md
 tags: audio, evidence
 ```
 
-A phrase that matches several documents is an error that names them, and
-`resolve` turns the same phrase into ranked candidates the agent can read back:
+An ambiguous phrase is an error that names its candidates, and `resolve` ranks
+the same phrase as data the agent can read back:
 
 ```console
 $ agentwiki get "duplex" --json
@@ -66,9 +66,9 @@ fuzzy       the-duplex-device            The Duplex Device
 fuzzy       duplex-device-probe          Duplex device probe
 ```
 
-Wikilinks and title mentions both become graph edges, and nothing is silently
-deleted — `rm` stamps a tombstone into frontmatter and leaves the file where
-inbound links already point:
+Wikilinks and title mentions both become graph edges. Nothing is silently
+deleted: `rm` stamps a tombstone into the frontmatter and leaves the file where
+inbound links already point.
 
 ```console
 $ agentwiki links q30-probe-run
@@ -81,8 +81,8 @@ the file is untouched at ~/wiki/q30-probe-run.md; restore with: agentwiki restor
 ```
 
 Artifacts are versioned by content hash, so a published version can be cited
-forever. `publish` also writes a stub document into the vault, which is what
-puts artifacts inside the searchable, linkable document graph:
+forever. `publish` also writes a stub document into the vault, which puts
+artifacts inside the searchable, linkable graph:
 
 ```console
 $ agentwiki publish ./dist --name q30-probe --kind bundle
