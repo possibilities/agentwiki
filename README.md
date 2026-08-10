@@ -9,7 +9,9 @@ humans — often by voice.
 
 Everything else is derived. Agents take a document's path and edit the file
 with their ordinary tools; the index reconciles itself on every read, and
-deleting it loses nothing. [docs/adr/](docs/adr/) records the decisions,
+deleting it loses nothing. The vault is also a git repository that maintains
+itself — every command commits what it finds changed, with mechanical messages,
+and pushes best-effort when a remote exists. [docs/adr/](docs/adr/) records the decisions,
 starting with [files are the source of truth](docs/adr/0001-files-are-the-source-of-truth.md);
 `CONTEXT.md` is the domain glossary.
 
@@ -38,6 +40,7 @@ agentwiki search "bluetooth hfp" --json
 agentwiki path bluetooth-q30-hfp-trap        # then edit that file directly
 agentwiki backlinks bluetooth-q30-hfp-trap
 agentwiki publish ./dist --name q30-probe --kind bundle
+agentwiki commit --message "Record the duplex decision"   # usually unnecessary
 agentwiki serve                              # docs :7777, artifacts :7778
 ```
 

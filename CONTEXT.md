@@ -15,6 +15,10 @@ phrase. Ambiguity is an error that names the candidates. _Avoid_: pointer, locat
 **Index** — the derived, rebuildable SQLite FTS database at `<vault>/.agentwiki/index.sqlite3`;
 never authoritative, always safe to delete. _Avoid_: database of record.
 
+**History** — the vault's own git repository, which every command maintains: it commits
+whatever it finds changed and pushes best-effort. Mechanical and automatic, and it excludes
+the derived index. _Avoid_: backup, sync, versioning (a Version is an artifact's content hash).
+
 **Artifact** — a named, versioned, immutable static bundle — a single self-contained file or a
 directory with an `index.html` entry point — stored content-addressed with a manifest row.
 _Avoid_: attachment, upload.

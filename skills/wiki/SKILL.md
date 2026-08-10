@@ -38,6 +38,11 @@ document and the installed binary disagree, the binary wins; see
 - **`serve` never returns.** It blocks in the foreground for as long as a human
   is reading. Background it, bound it, or hand the command to the user — never
   call it inline and wait.
+- **Never commit or push the vault yourself.** It is a git repository and it
+  maintains itself: every command commits whatever it finds changed — including
+  files *you* edited directly — and pushes when a remote exists. Running `git`
+  against the vault by hand is not needed, and hand-written messages are not
+  wanted. See [History](#history-is-automatic).
 
 ## Preflight
 
@@ -49,8 +54,8 @@ agentwiki list --limit 10  # what is actually in here
 
 `vault_not_found` means no vault exists yet. Reads never conjure one — an
 empty vault and a missing vault are different answers — but any write creates
-it (and `git init`s it, if git is around). The vault resolves as `--vault` >
-`AGENTWIKI_VAULT` > `~/wiki`.
+it, and any write also makes it a git repository if it is not one already. The
+vault resolves as `--vault` > `AGENTWIKI_VAULT` > `~/wiki`.
 
 One asymmetry worth knowing: the artifact store at
 `~/.local/share/agentwiki/` is **per user, not per vault**. `--vault` does not
@@ -158,6 +163,55 @@ things about the stub, both verified:
   `artifacts show`, not the stub's body text.
 - Republishing without repeating `--tag` publishes the new version with no
   tags. Tags are per-version manifest data, not sticky per name.
+
+## History is automatic
+
+The vault is a git repository and it maintains itself. Every command commits
+whatever it finds changed on its way out, then pushes best-effort when a remote
+exists. Because agents edit vault files directly, the command *after* your edit
+is what records it — which is the same reconcile-on-read property that makes
+`get` already see your change, applied to history.
+
+```bash
+P=$(agentwiki path "the bluetooth trap")
+# …edit $P with Edit / Write…
+agentwiki get "the bluetooth trap" --json   # reads the edit *and* commits it
+```
+
+Messages are mechanical — git's own status letter and the literal path — and
+nothing infers what a change meant:
+
+```console
+A bluetooth-q30-hfp-trap.md      # one file: status and path
+3 files changed                  # several: the body lists each one
+```
+
+Say something about a change and it belongs in the document, not the message.
+When a commit genuinely needs prose, ask for it explicitly:
+
+```bash
+agentwiki commit --message "Record the duplex decision" --json
+agentwiki commit --json          # no message: mechanical, like every other commit
+```
+
+`commit` exists for the one gap the automatic hook leaves: **`serve` never
+returns, so it never commits.** It is also the answer for a document written
+and then not read again before you finish.
+
+Four things worth knowing:
+
+- **The derived index is gitignored.** It is rebuilt by any read and must never
+  enter history — a binary rewritten wholesale per commit, whose `-wal` and
+  `-shm` are live process state.
+- **Every git call is best-effort and silent.** No git binary, a read-only
+  vault, or an unreachable remote is a no-op, never an error. The vault is the
+  source of truth and works completely without history.
+- **A push failure is not lost work.** The commits stay; the next push carries
+  them. `agentwiki doctor` reports branch, remote, and how many are unpushed,
+  and `guide --json` carries the same block.
+- **No remote means nothing to push to.** Adding one is ordinary git
+  (`git -C ~/wiki remote add origin <url>`) and is a decision about where your
+  notes go — agentwiki will not invent it.
 
 ## Refs resolve in tiers
 
@@ -361,6 +415,9 @@ before trusting its prose.
 | Republish and assume the tags carried over | repeat `--tag` on every publish |
 | Call `serve` and wait for it to return | it never returns; background it or hand it over |
 | `reindex` reflexively after editing a file | reads reconcile; just read |
+| `git -C ~/wiki commit` after writing a document | nothing; the next command commits it |
+| Report that the vault "isn't a git repo" | any write makes it one; `doctor` says what is true |
+| Write a thoughtful commit message for the vault | put the prose in the document; messages are mechanical |
 | Scrape human output with grep/awk | `--json`, or `--jsonl` into a filter |
 
 ## Sibling skills

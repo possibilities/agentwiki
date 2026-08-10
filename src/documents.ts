@@ -6,6 +6,8 @@ import { openIndex } from "./context.ts";
 import { CliError, UsageError } from "./errors.ts";
 import type { ParsedFlags } from "./flags.ts";
 import { documentTitle, editFrontmatter, serializeDocument, splitDocument } from "./frontmatter.ts";
+import type { GitReport } from "./git.ts";
+import { gitReport } from "./git.ts";
 import type { GraphSnapshot } from "./graph.ts";
 import { buildGraph, edgesFrom, edgesTo, orphanSlugs } from "./graph.ts";
 import type { DocumentRow, VaultIndex } from "./index.ts";
@@ -403,6 +405,18 @@ export function graphCommand(context: Context, flags: ParsedFlags): CommandResul
   }
 }
 
+function gitLine(report: GitReport): string {
+  if (!report.repo) return "not a repository — the next write makes it one";
+  const remote = report.remote ?? "no remote (nothing to push to)";
+  const backlog =
+    report.unpushed === null
+      ? "no upstream"
+      : report.unpushed === 0
+        ? "pushed"
+        : `${report.unpushed} unpushed`;
+  return `${report.branch ?? "detached"}, ${remote}, ${backlog}`;
+}
+
 export function doctorCommand(context: Context, flags: ParsedFlags): CommandResult {
   if (flags.positional.length > 0) throw new UsageError("doctor takes no positional arguments");
   const index = openIndex(context, { create: false });
@@ -429,6 +443,9 @@ export function doctorCommand(context: Context, flags: ParsedFlags): CommandResu
       duplicate_slugs: duplicates,
       orphans,
       broken_artifact_stubs: stubs,
+      // Reported, but never folded into `healthy`: an unpushed vault is a
+      // configuration state, not a defect in the vault itself.
+      git: gitReport(context.vaultRoot),
       healthy: issues === 0,
     };
     const lines = [
@@ -439,6 +456,7 @@ export function doctorCommand(context: Context, flags: ParsedFlags): CommandResu
       `ambiguous  ${ambiguous.length}${ambiguous.length === 0 ? "" : `: ${ambiguous.map((link) => `${link.from} → ${link.target}`).join(", ")}`}`,
       `duplicates ${duplicates.length}${duplicates.length === 0 ? "" : `: ${duplicates.map((row) => row.slug).join(", ")}`}`,
       `stubs      ${stubs.length === 0 ? "ok" : stubs.join(", ")}`,
+      `git        ${gitLine(data.git)}`,
     ];
     return { data, human: lines.join("\n") };
   } finally {

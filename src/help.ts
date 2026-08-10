@@ -21,6 +21,7 @@ export const COMMANDS = [
   { name: "open", summary: "Open an artifact's latest URL in the browser" },
   { name: "gc", summary: "Reclaim the bytes behind tombstoned artifacts" },
   { name: "serve", summary: "Serve documents and artifacts on demand" },
+  { name: "commit", summary: "Record vault changes in git now, instead of on the next command" },
   { name: "guide", summary: "Print the stable machine-readable agent contract" },
   { name: "help", summary: "Show help for a command" },
 ] as const;
@@ -123,6 +124,19 @@ Serving (no daemon)
                                              redirects there.
   agentwiki open <name>                      Errors with a recovery if serve
                                              is not already running.
+
+History (automatic — do not commit the vault yourself)
+  The vault is a git repository, and every command commits whatever it finds
+  changed on its way out, then pushes best-effort when a remote exists. That
+  includes files you edited directly: the command after your edit records it.
+  The derived index is gitignored and never enters history.
+
+  agentwiki commit --message "..."           Record now rather than on the next
+                                             command, with your own subject.
+                                             The one gap it fills: serve never
+                                             returns, so it never commits.
+  agentwiki doctor                           Reports branch, remote, and how
+                                             many commits are unpushed.
 
 Contract
   --json emits {schema_version, ok, error, data}; domain failures are ok:false
@@ -258,6 +272,14 @@ Artifacts bind the second port so they land on an origin of their own: their
 scripts cannot read /d/<slug> or reach the network, and a bundle can still
 load and fetch its own files. Cited /a/… paths keep working — the document
 port redirects them.`,
+
+  commit: `agentwiki commit — record vault changes in git now
+
+Every command already commits what it finds changed on its way out, and pushes
+when a remote exists. This is the explicit form, for a document written and
+then not read again — and the only way to give the commit your own message.
+
+  --message <text>   Use this subject instead of one derived from the changes.`,
 
   guide: "agentwiki guide — print the stable machine-readable agent contract (use --json)",
 

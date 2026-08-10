@@ -1,5 +1,6 @@
 import { statSync } from "node:fs";
 import { CliError } from "./errors.ts";
+import { ensureGit } from "./git.ts";
 import { VaultIndex } from "./index.ts";
 import type { Environ } from "./paths.ts";
 import { ensureVault } from "./vault.ts";
@@ -30,8 +31,12 @@ export type Handler = (
 /** Read commands never conjure a vault: an empty result and a missing vault
  * are different answers, and an agent has to be able to tell them apart. */
 export function openIndex(context: Context, options: { create: boolean }): VaultIndex {
-  if (options.create) ensureVault(context.vaultRoot);
-  else assertVaultExists(context.vaultRoot);
+  if (options.create) {
+    ensureVault(context.vaultRoot);
+    // Only writes bring a vault under git. A read finding no repository has
+    // nothing to record anyway, and must not create one behind the user.
+    ensureGit(context.vaultRoot);
+  } else assertVaultExists(context.vaultRoot);
   const index = VaultIndex.open(context.vaultRoot);
   index.reconcile();
   return index;

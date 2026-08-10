@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { ArtifactStore, artifactHome } from "./artifacts.ts";
 import type { CommandResult, Context, Handler } from "./context.ts";
-import { nowIso, openIndex, readAllStdin } from "./context.ts";
+import { assertVaultExists, nowIso, openIndex, readAllStdin } from "./context.ts";
 import {
   addDocument,
   doctorCommand,
@@ -23,6 +23,7 @@ import { failure, success } from "./envelope.ts";
 import { CliError, UsageError } from "./errors.ts";
 import type { FlagSpec, ParsedFlags } from "./flags.ts";
 import { parseFlags } from "./flags.ts";
+import { commitVault, ensureGit, gitReport, pushVault, syncVault } from "./git.ts";
 import { buildGuide } from "./guide.ts";
 import { AGENT_HELP, AGENT_TEASER, HELP, TOP_HELP, VERSION } from "./help.ts";
 import {
@@ -73,6 +74,7 @@ const REGISTRY: Record<string, CommandDefinition> = {
   open: { value: ["--port"], run: openCommand },
   gc: { run: gcCommand },
   serve: { value: ["--port", "--artifact-port"], run: serveCommand },
+  commit: { value: ["--message"], run: commitCommand },
   guide: { run: guideCommand },
 };
 
@@ -81,6 +83,26 @@ function specFor(definition: CommandDefinition): FlagSpec {
     value: new Set([...GLOBAL.value, ...(definition.value ?? [])]),
     bool: new Set([...GLOBAL.bool, ...(definition.bool ?? [])]),
   };
+}
+
+/** The explicit form of what every command already does on its way out, for the
+ * one gap that leaves: a document written and then never read again. */
+function commitCommand(context: Context, flags: ParsedFlags): CommandResult {
+  if (flags.positional.length > 0) throw new UsageError("commit takes no positional arguments");
+  assertVaultExists(context.vaultRoot);
+  ensureGit(context.vaultRoot);
+  const committed = commitVault(context.vaultRoot, flags.values["message"]);
+  if (committed) pushVault(context.vaultRoot);
+  const report = gitReport(context.vaultRoot);
+  const data = { committed, ...report };
+  const lines = [
+    committed
+      ? `committed  ${report.last_commit?.subject ?? "(unknown)"}`
+      : "committed  nothing — the vault already matches its history",
+    `remote     ${report.remote ?? "none — add one to push: git -C " + context.vaultRoot + " remote add origin <url>"}`,
+    `unpushed   ${report.unpushed ?? "unknown (no upstream branch)"}`,
+  ];
+  return { data, human: lines.join("\n") };
 }
 
 function guideCommand(context: Context, flags: ParsedFlags): CommandResult {
@@ -218,6 +240,10 @@ async function main(argv: string[]): Promise<number> {
 
   try {
     emit(await definition.run(context, flags), mode);
+    // The vault records itself. Agents edit its files with their own tools, so
+    // the end of a command is the only moment agentwiki can see what moved —
+    // and emitting first keeps git off the path the caller waits on.
+    syncVault(context.vaultRoot);
     return 0;
   } catch (error) {
     if (error instanceof UsageError) {

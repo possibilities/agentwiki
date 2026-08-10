@@ -1,4 +1,5 @@
 import { ARTIFACT_KINDS, MAX_ARTIFACT_BYTES } from "./artifacts.ts";
+import { gitReport } from "./git.ts";
 import { VERSION } from "./help.ts";
 import { INDEX_SCHEMA_VERSION } from "./index.ts";
 import { MIN_MENTION_LENGTH } from "./links.ts";
@@ -25,6 +26,13 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
       artifact_manifest: `${artifactHome}/manifest.sqlite3`,
       authority:
         "Files are truth and the index is derived: deleting the index loses nothing and reindex rebuilds it. The artifact manifest is authoritative and cannot be rebuilt from the vault.",
+    },
+    git: {
+      ...gitReport(vaultRoot),
+      behavior:
+        "The vault is a git repository and every command commits whatever it finds changed, then pushes best-effort when a remote exists. Never commit or push the vault yourself.",
+      derived_index: "gitignored — it is rebuilt by any read and must not enter history",
+      gap: "serve never returns, so it never commits; agentwiki commit is the explicit form",
     },
     addressing: {
       ref_tiers: [

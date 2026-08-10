@@ -361,18 +361,27 @@ assert_error_code "content_reclaimed"
 # --- serve -------------------------------------------------------------------
 
 step "serve"
-PORT="$(bun -e '
+# Both ports, not just the document one: leaving --artifact-port at its default
+# makes this step collide with any agentwiki already serving on this machine —
+# including one a previous smoke run failed to clean up. Both listeners are held
+# open at once so the OS cannot hand back the same port twice.
+read -r PORT ARTIFACT_PORT <<<"$(bun -e '
   const net = require("net");
-  const srv = net.createServer();
-  srv.listen(0, "127.0.0.1", () => {
-    process.stdout.write(String(srv.address().port));
-    srv.close();
+  const open = () =>
+    new Promise((resolve) => {
+      const srv = net.createServer();
+      srv.listen(0, "127.0.0.1", () => resolve(srv));
+    });
+  Promise.all([open(), open()]).then((servers) => {
+    const ports = servers.map((srv) => srv.address().port);
+    for (const srv of servers) srv.close();
+    process.stdout.write(ports.join(" "));
   });
 ')"
-[[ -n "$PORT" ]] || fail "could not find a free port"
-echo "using port $PORT"
+[[ -n "$PORT" && -n "$ARTIFACT_PORT" ]] || fail "could not find two free ports"
+echo "using port $PORT (documents) and $ARTIFACT_PORT (artifacts)"
 
-wiki serve --port "$PORT" >"$TMP/serve.log" 2>&1 &
+wiki serve --port "$PORT" --artifact-port "$ARTIFACT_PORT" >"$TMP/serve.log" 2>&1 &
 SERVE_PID=$!
 
 ready=0
@@ -458,6 +467,37 @@ step "index rebuild after deleting index.sqlite3"
 rm -f "$AGENTWIKI_VAULT/.agentwiki/index.sqlite3"
 run list
 expect_status 0
+
+# --- the vault records itself -------------------------------------------------
+# This vault was created by mkdir at the top of the script, never by agentwiki,
+# which is exactly the case that used to end up with no repository at all.
+
+step "a hand-made vault became a git repository"
+assert_contains "$(git -C "$AGENTWIKI_VAULT" rev-parse --is-inside-work-tree)" "true" "vault repo"
+
+step "the derived index never entered the history"
+assert_not_contains "$(git -C "$AGENTWIKI_VAULT" ls-files)" "index.sqlite3" "tracked files"
+
+step "a file edited directly is committed by the next command"
+printf '# Smoke New Doc\n\nedited behind agentwiki'\''s back\n' \
+  >"$AGENTWIKI_VAULT/smoke-new-doc.md"
+run get smoke-new-doc --json
+expect_status 0
+assert_contains "$(git -C "$AGENTWIKI_VAULT" log -1 --format=%s)" "M smoke-new-doc.md" "commit subject"
+assert_contains "$(git -C "$AGENTWIKI_VAULT" status --porcelain)" "" "working tree"
+
+step "commit takes a message of its own"
+printf '# Explicit\n' >"$AGENTWIKI_VAULT/explicit.md"
+run commit --message "Record the duplex decision" --json
+expect_status 0
+assert_ok_true
+assert_contains "$(git -C "$AGENTWIKI_VAULT" log -1 --format=%s)" "Record the duplex decision" "commit subject"
+
+step "commit is honest when there is nothing to record"
+run commit --json
+expect_status 0
+assert_ok_true
+assert_contains "$LAST_STDOUT" '"committed":false' "commit envelope"
 
 echo
 printf '\033[32m%s\033[0m\n' "ALL SMOKE CHECKS PASSED"

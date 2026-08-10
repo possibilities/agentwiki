@@ -44,7 +44,14 @@ that description is all a session has to route on.
 
 `docs/adr/` records them, one file each: files are the source of truth,
 artifacts are immutable, serving is on demand, tombstones never delete, refs
-resolve in tiers, and artifacts get their own origin.
+resolve in tiers, artifacts get their own origin, and the vault commits itself.
+
+`src/git.ts` is the only module that shells out to git, and every call in it is
+best-effort by construction: the vault is the source of truth and must stay
+fully usable with no history at all, so nothing in there may throw into a
+command. Commit messages are mechanical on purpose — status letter and literal
+path, never a summary — so that nothing in this codebase is in the business of
+inferring what a change meant.
 
 ## Conventions
 

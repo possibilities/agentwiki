@@ -310,3 +310,55 @@ describe("the agent surface", () => {
     expect(body.data.candidates).toEqual([]);
   });
 });
+
+describe("the vault records itself", () => {
+  function log(args: string[]): string {
+    const result = Bun.spawnSync({ cmd: ["git", "-C", vault, ...args] });
+    return result.stdout.toString().trim();
+  }
+
+  test("a write makes the vault a repository and commits what it wrote", () => {
+    expect(run(["new", "Committed On Write"]).status).toBe(0);
+    expect(log(["rev-parse", "--is-inside-work-tree"])).toBe("true");
+    expect(log(["ls-files"])).toContain("committed-on-write.md");
+  });
+
+  // The headline behavior: agents edit vault files with their own tools, so a
+  // change agentwiki never saw still has to reach the history.
+  test("a file edited directly is committed by the very next command", () => {
+    run(["new", "Edited Behind Our Back"]);
+    writeFileSync(
+      join(vault, "edited-behind-our-back.md"),
+      "# Edited behind our back\n\nnew body\n",
+    );
+    expect(log(["status", "--porcelain"])).not.toBe("");
+    run(["get", "edited-behind-our-back", "--json"]);
+    expect(log(["status", "--porcelain"])).toBe("");
+    expect(log(["log", "-1", "--format=%s"])).toBe("M edited-behind-our-back.md");
+  });
+
+  test("the derived index never enters the history", () => {
+    run(["search", "anything", "--json"]);
+    expect(log(["ls-files"])).not.toContain("index.sqlite3");
+    expect(log(["status", "--porcelain"])).toBe("");
+  });
+
+  test("commit is the explicit form and takes a message of its own", () => {
+    writeFileSync(join(vault, "explicitly-committed.md"), "# Explicitly committed\n");
+    const { status, body } = envelope([
+      "commit",
+      "--message",
+      "Record the duplex decision",
+      "--json",
+    ]);
+    expect(status).toBe(0);
+    expect(body.data.committed).toBe(true);
+    expect(log(["log", "-1", "--format=%s"])).toBe("Record the duplex decision");
+  });
+
+  test("commit reports honestly when there is nothing to record", () => {
+    const { body } = envelope(["commit", "--json"]);
+    expect(body.data.committed).toBe(false);
+    expect(body.data.repo).toBe(true);
+  });
+});

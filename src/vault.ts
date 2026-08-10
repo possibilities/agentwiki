@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import type { Dirent, Stats } from "node:fs";
 import { mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
@@ -26,10 +25,10 @@ export function templatesDirectory(root: string): string {
   return join(root, VAULT_STATE_DIRECTORY, "templates");
 }
 
-/** A fresh vault becomes a git repository if git is around: the files are the
- * source of truth, so their history should be too. Failure is not fatal —
- * the vault works identically without it. */
-export function ensureVault(root: string): { created: boolean; git: boolean } {
+/** Directories only. Making the vault a git repository is `ensureGit`, which
+ * runs on every write rather than only here: a vault that already existed must
+ * still gain a history. */
+export function ensureVault(root: string): { created: boolean } {
   let created = false;
   try {
     statSync(root);
@@ -38,9 +37,7 @@ export function ensureVault(root: string): { created: boolean; git: boolean } {
     created = true;
   }
   mkdirSync(join(root, VAULT_STATE_DIRECTORY), { recursive: true, mode: 0o700 });
-  if (!created) return { created, git: false };
-  const result = spawnSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
-  return { created, git: result.status === 0 };
+  return { created };
 }
 
 const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown", ".mdown", ".mkd"]);
