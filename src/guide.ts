@@ -81,7 +81,7 @@ export function buildGuide(vaultRoot: string, artifactHome: string): unknown {
       host: "loopback only",
       execution: "none — static bytes and rendered markdown only",
       daemon:
-        "agentwiki.serve, a user launch agent installed by AgentStart; every other command still works with it stopped",
+        "agentwiki.server, a user launch agent installed by AgentStart; every other command still works with it stopped",
       document_port: DEFAULT_PORT,
       artifact_port: DEFAULT_ARTIFACT_PORT,
       artifact_isolation:

@@ -266,7 +266,7 @@ tombstoned. Manifest rows survive, marked reclaimed.`,
   --artifact-port <n>     Artifact listen port (default 7778)
 
 Localhost only, static bytes only, no server-side execution. A resident
-launch agent (agentwiki.serve, installed by AgentStart) already serves the
+launch agent (agentwiki.server, installed by AgentStart) already serves the
 default vault; run this by hand for a different vault or port. Every
 other command works without it.
 

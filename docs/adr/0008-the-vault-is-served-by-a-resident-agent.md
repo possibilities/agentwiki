@@ -2,7 +2,7 @@
 
 Supersedes [0003 — Serving is on demand; there is no daemon](0003-serve-on-demand.md).
 
-`serve` is now supervised by a user launch agent, `agentwiki.serve`, installed
+`serve` is now supervised by a user launch agent, `agentwiki.server`, installed
 by AgentStart along with every other fleet service. It binds both loopback
 origins at login and stays up.
 
