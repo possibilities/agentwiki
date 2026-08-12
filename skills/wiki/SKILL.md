@@ -23,7 +23,7 @@ document and the installed binary disagree, the binary wins; see
 
 - **Never round-trip a document body through CLI arguments.** There is no
   `edit` command and that is deliberate. `agentwiki path <ref>` hands back an
-  absolute path; edit it with Edit/Write/`$EDITOR`. The next command already
+  absolute path; edit the file there directly. The next command already
   sees the change.
 - **Speak refs; don't invent slugs.** Every `<ref>` accepts a slug, an exact
   title, or a spoken phrase. A phrase matching two documents is an
@@ -111,7 +111,7 @@ searchable term at all is `empty_query`.
 
 ```bash
 P=$(agentwiki path "the bluetooth trap")
-# …edit $P with Edit / Write / $EDITOR…
+# …edit the file at $P directly…
 agentwiki get "the bluetooth trap" --json    # the change is already visible
 ```
 
@@ -175,7 +175,7 @@ is what records it — which is the same reconcile-on-read property that makes
 
 ```bash
 P=$(agentwiki path "the bluetooth trap")
-# …edit $P with Edit / Write…
+# …edit the file at $P directly…
 agentwiki get "the bluetooth trap" --json   # reads the edit *and* commits it
 ```
 
