@@ -1,6 +1,6 @@
 ---
 name: wiki
-description: Capture, find, link, and publish durable markdown with the agentwiki CLI — a plain-file vault that is the source of truth, full-text search, a wikilink graph, and immutable content-addressed artifacts. Use when something should outlive the session ("write this up", "save this for later", "note that down", "keep this somewhere"); when the user asks where something was written down ("where did we document X?", "find that write-up"); when a snippet, report, decision, or finding needs a home; when publishing an immutable citable artifact; or when linking documents to each other.
+description: Capture, find, link, and publish durable markdown with the agentwiki CLI — a plain-file vault that is the source of truth, full-text search, a wikilink graph, and immutable content-addressed artifacts. The vault is the operator's library — authored documents meant to be found again by name. Use when the user asks for a document ("write this up", "document this"); when finished research, exploration, or a ruled decision deserves a durable named home; when the user asks where something was written down ("where did we document X?", "find that write-up"); when publishing an immutable citable artifact; or when linking documents to each other. Working state, briefs, and successor-session context are ~/handoffs/ files, not wiki pages.
 ---
 
 # Wiki — the durable document vault
@@ -12,8 +12,14 @@ That single decision shapes everything below: you do not write documents
 *through* this CLI, you ask it where a document lives and then edit the file
 with your ordinary tools.
 
-Reach for it whenever a finding would otherwise die in a transcript. Session
-context evaporates; a vault file does not.
+The vault is the operator's library, not the session's memory: a wiki
+document is authored, durable, and meant to be found again *by name*. What
+happened needs no writing — every session on this machine is already indexed
+(the `chats` skill); the plan's state lives on the board; context written
+for one particular successor session is a dated file in `~/handoffs/`,
+deleted when consumed, never a page here. If nobody would ever ask for it by
+name, it does not belong. The `document-placement-policy` page in this vault
+is the contract.
 
 Verified against agentwiki 0.1.0. The CLI is self-describing — when this
 document and the installed binary disagree, the binary wins; see
@@ -444,8 +450,14 @@ one you used last.
 - **`chats`** (cass) — past coding-agent sessions. Transcripts, not documents:
   search there for what was *said*, here for what was *written down*.
 
-If a thing is authored, durable, and meant to be found again by name, it is a
-wiki document.
+A fourth neighbour is a convention, not a CLI: `~/handoffs/` holds dated
+standalone transfer files — briefs and continuation context for one named
+successor session, deleted by their consumer. The routing between all of
+these stores is the `document-placement-policy` page in this vault.
+
+If a thing is authored, durable, and meant to be found again by name, it is
+a wiki document; if only one particular future session will read it, it is a
+handoff.
 
 ## For the human
 
