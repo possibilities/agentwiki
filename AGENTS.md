@@ -27,9 +27,10 @@ Three things a listing will not tell you:
 ## The skill
 
 `skills/wiki/SKILL.md` is the canonical deep runbook for driving this CLI, and
-the surface most agent sessions actually see: AgentStart's skills scan installs it
-globally with `npx skills add` against this checkout, discovering it by the
-nested `skills/<name>/SKILL.md` layout, so every session lists its name and
+the surface most agent sessions actually see: AgentStart's skills scan copies
+it into the private core plugin with `npx skills add --copy` against this
+checkout, discovering it by the nested `skills/<name>/SKILL.md` layout, so
+every session lists its name and
 frontmatter description whether or not the binary is ever run. `--agent-help`
 stays as the in-binary fallback and points at it.
 
@@ -75,11 +76,13 @@ inferring what a change meant.
 This checkout is one of the agent* fleet under `~/code`. Shared machinery
 lives in two siblings, and some changes here must cascade:
 
-- Skills under `skills/<name>/` ship globally through AgentStart's scan
+- Skills under `skills/<name>/` ship through AgentStart's private core plugin
   (`~/code/agentstart/scripts/sync-skills`, run six-hourly by the scheduled
-  updater): a SKILL.md edit is live within six hours, or on demand by
-  running that script. Whether a new skill earns a TOOLS.md advertisement
-  line is a deliberate decision — `agentwiki get tool-advertisement-policy`.
+  updater): Claude Code and Codex expose them under the `agentstart-core`
+  plugin namespace, while Pi uses the plain skill name. A SKILL.md edit is
+  live within six hours, or on demand by running that script. Whether a new
+  skill earns a TOOLS.md advertisement line is a deliberate decision —
+  `agentwiki get tool-advertisement-policy`.
 - Adding or removing a call to another fleet tool changes the fleet map:
   update `~/code/agentstart/skills/fleet/MAP.md` (served by the `fleet`
   skill, every edge with evidence) in the same change.
