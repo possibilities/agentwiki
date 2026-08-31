@@ -111,7 +111,7 @@ Cited `/a/…` paths are unaffected — the document port redirects them.
 ```bash
 agentwiki --agent-teaser    # one line
 agentwiki --agent-help      # the runbook: read commands first, then writes
-agentwiki guide --json      # the stable machine-readable card
+agentwiki guide --json      # the fleet agent contract; the help above renders from it
 ```
 
 The two habits worth building: take the `path` and edit the file rather than

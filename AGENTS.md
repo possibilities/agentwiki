@@ -19,8 +19,11 @@ Three things a listing will not tell you:
 
 - `src/index.ts` is the *domain* index — the derived SQLite index of the
   glossary, not a package entry point.
-- `src/help.ts` and `src/guide.ts` are the human help and the machine card;
-  adding or changing a command means touching both.
+- `src/contract.ts` is the single authored description of the CLI — the fleet
+  agent contract `guide --json` emits. `src/help.ts` renders it: `--help`,
+  `agentwiki help <command>`, `--agent-help` and `--agent-teaser` are all
+  renders, and `src/main.ts` reads each command's flag grammar back out of it.
+  Adding or changing a command means editing the contract, and nothing else.
 - `src/envelope.ts`, `src/errors.ts`, `src/flags.ts`, `src/paths.ts` are the
   shared CLI core, copied byte-identical into agentboard.
 

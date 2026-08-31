@@ -116,6 +116,25 @@ describe("capture and read", () => {
     expect(second.body.data.slug).toBe("capture-2");
   });
 
+  test("add takes the body inline, for a caller that has no pipe", () => {
+    const added = envelope([
+      "add",
+      "--content",
+      "# Inline\n\nbody from argv\n",
+      "--title",
+      "Inline capture",
+      "--json",
+    ]);
+    expect(added.status).toBe(0);
+    expect(added.body.data.slug).toBe("inline-capture");
+    expect(envelope(["get", "inline-capture", "--json"]).body.data.content).toContain(
+      "body from argv",
+    );
+    const both = run(["add", "--content", "x", "somefile.md", "--json"]);
+    expect(both.status).toBe(2);
+    expect(both.stderr).toContain("not both");
+  });
+
   test("get returns the body and the frontmatter, and --meta-only drops the body", () => {
     const full = envelope(["get", "capture", "--json"]);
     expect(full.body.data.content).toContain("first");
@@ -261,7 +280,10 @@ describe("the agent surface", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Reading (safe anytime)");
     expect(result.stdout.indexOf("Reading")).toBeLessThan(result.stdout.indexOf("Writing"));
-    expect(result.stdout).toContain("usage faults print help to stderr with exit 2");
+    // The contract section is rendered from concepts.output_contract, so the
+    // exit codes an agent relies on are printed rather than restated.
+    expect(result.stdout).toContain("exit 2");
+    expect(result.stdout).toContain("usage fault");
   });
 
   test("the runbook points at the wiki skill as the deeper runbook", () => {
@@ -271,13 +293,15 @@ describe("the agent surface", () => {
     expect(result.stdout).toContain("in-binary fallback");
   });
 
-  test("the guide is machine readable and names the storage it uses", () => {
+  test("the guide is the agent contract, and names the storage it uses", () => {
     const { status, body } = envelope(["guide", "--json"]);
     expect(status).toBe(0);
-    expect(body.data.name).toBe("agentwiki");
-    expect(body.data.storage.vault).toBe(vault);
-    expect(body.data.output_contract.usage_fault).toContain("exit 2");
+    expect(body.data.contract_version).toBe(1);
+    expect(body.data.meta.name).toBe("agentwiki");
+    expect(body.data.concepts.model.storage.vault).toBe(vault);
+    expect(body.data.concepts.output_contract.exit_codes["2"]).toContain("usage fault");
     expect(body.data.commands.length).toBeGreaterThan(15);
+    expect(body.data.concepts.read_only_commands).toContain("artifacts list");
   });
 
   test("doctor reports a dangling link it can see", () => {
