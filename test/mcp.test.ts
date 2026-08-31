@@ -68,6 +68,12 @@ describe("which commands become tools", () => {
     for (const node of hidden) expect(exposed.has(node.path.replace(/ /g, "_"))).toBe(false);
   });
 
+  test("serve declares that it blocks, and is not exposed as a tool", () => {
+    const serve = CONTRACT.commands.find((command) => command.name === "serve");
+    expect(serve?.blocking).toBe(true);
+    expect(TOOLS.map((tool) => tool.name)).not.toContain("serve");
+  });
+
   test("mcp declares itself internal, mutating, and blocking", () => {
     const mcp = CONTRACT.commands.find((command) => command.name === "mcp");
     expect(mcp).toBeDefined();
@@ -128,6 +134,28 @@ describe("the input schema", () => {
     expect(propertiesOf("publish")["kind"]?.["enum"]).toBeDefined();
     expect(propertiesOf("list")["limit"]?.["default"]).toBe(20);
     expect(propertiesOf("list")["limit"]?.["type"]).toBe("integer");
+  });
+
+  test("a declared bound reaches the schema as minimum and maximum", () => {
+    // The contract's bounds are the ones the CLI enforces, and a bound that
+    // stops at the contract is a bound the caller still violates.
+    expect(propertiesOf("list")["limit"]?.["minimum"]).toBe(1);
+    expect(propertiesOf("search")["limit"]?.["minimum"]).toBe(1);
+    expect(propertiesOf("resolve")["limit"]?.["minimum"]).toBe(1);
+    // The contract declares no upper bound on --limit and none is invented:
+    // what lands is zod's own integer ceiling, not a cap the CLI would refuse.
+    expect(propertiesOf("list")["limit"]?.["maximum"]).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
+  test("the worked invocations reach the tool description", () => {
+    const publish = TOOLS.find((tool) => tool.name === "publish");
+    expect(publish?.description).toContain("Examples:");
+    expect(publish?.description).toContain("agentwiki publish ./dist --name q30-probe");
+    // Declared only where one teaches something: every agent leaf that had a
+    // worked invocation in the hand-written help carries it here.
+    for (const name of ["new", "add", "get", "path", "list", "search", "resolve", "rm"]) {
+      expect(TOOLS.find((tool) => tool.name === name)?.description, name).toContain("Examples:");
+    }
   });
 
   test("an in path warns that a relative one is resolved somewhere else", () => {

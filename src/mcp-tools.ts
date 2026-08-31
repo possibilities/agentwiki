@@ -126,7 +126,13 @@ function scalar(argument: ContractArgument): z.ZodType {
   if (argument.type === "boolean") return z.boolean();
   if (argument.choices !== undefined) return z.enum(argument.choices as [string, ...string[]]);
   if (argument.type === "string") return z.string();
-  return argument.type === "integer" ? z.number().int() : z.number();
+  let number = argument.type === "integer" ? z.number().int() : z.number();
+  // MCP.md maps `minimum`/`maximum` to the same keywords. Declared on the
+  // argument, so the schema carries the bound the CLI already enforces rather
+  // than leaving a caller to discover it as a usage fault.
+  if (argument.minimum !== undefined) number = number.min(argument.minimum);
+  if (argument.maximum !== undefined) number = number.max(argument.maximum);
+  return number;
 }
 
 function property(argument: ContractArgument): z.ZodType {
@@ -194,6 +200,13 @@ function mapConstraints(leaf: ContractCommand): MappedConstraints {
         // legal and unreadable in practice; there the sentence is the whole
         // mapping. agentwiki's only constraint is exactly that case.
         if (constraint.required === true) keywords["oneOf"] = eitherOf(members);
+        break;
+      case "at_least_one":
+        // `anyOf` of single-property `required` shapes, per MCP.md. agentwiki
+        // declares none today; the branch is here because the file implements
+        // the whole mapping, and a kind it silently dropped would land as a
+        // schema that permits a call the command refuses.
+        keywords["anyOf"] = eitherOf(members);
         break;
       case "requires":
         keywords["dependentRequired"] = { [members[0]!]: members.slice(1) };
@@ -297,6 +310,17 @@ function toolDescription(
   parts.push(`Runs \`${contract.meta.name} ${path.join(" ")}\` in this process.`);
   parts.push(...sentences);
   if (leaf.guidance !== undefined) parts.push(leaf.guidance);
+  // The contract's worked invocations, in the CLI's own spelling. A tool
+  // description is one more render of the contract, and dropping the examples
+  // here would leave this surface poorer than the help text it shares a
+  // source with.
+  if (leaf.examples !== undefined && leaf.examples.length > 0) {
+    parts.push(
+      ["Examples:", ...leaf.examples.map((e) => `  ${e.invocation}\n    ${e.description}`)].join(
+        "\n",
+      ),
+    );
+  }
   return parts.join("\n\n");
 }
 

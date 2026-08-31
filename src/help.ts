@@ -56,6 +56,12 @@ function annotate(argument: ContractArgument): string {
   const notes: string[] = [];
   if (argument.required === true) notes.push("required");
   if (argument.default !== undefined) notes.push(`default ${String(argument.default)}`);
+  // A bound the contract carries is a bound the reader is shown; one stated
+  // only in prose is one a caller violates.
+  if (argument.minimum !== undefined && argument.maximum !== undefined) {
+    notes.push(`${argument.minimum}..${argument.maximum}`);
+  } else if (argument.minimum !== undefined) notes.push(`minimum ${argument.minimum}`);
+  else if (argument.maximum !== undefined) notes.push(`maximum ${argument.maximum}`);
   if (argument.aliases !== undefined && argument.aliases.length > 0) {
     notes.push(argument.aliases.join(", "));
   }
@@ -161,6 +167,9 @@ export function commandHelp(contract: Contract, path: readonly string[]): string
     "",
     wrap(command.summary),
     "",
+    ...(command.blocking === true
+      ? [wrap("Blocks: this waits on something outside the CLI and does not return promptly."), ""]
+      : []),
     ...section(
       "Subcommands",
       command.subcommands === undefined ? "" : commandIndex(command.subcommands, true),
@@ -194,6 +203,16 @@ export function commandHelp(contract: Contract, path: readonly string[]): string
               constraint.description === undefined ? "" : ` — ${constraint.description}`,
             ].join(""),
           ),
+        )
+        .join("\n"),
+    ),
+  );
+  lines.push(
+    ...section(
+      "Examples",
+      (command.examples ?? [])
+        .map((example) =>
+          [`  ${example.invocation}`, wrap(example.description, WIDTH, "      ")].join("\n"),
         )
         .join("\n"),
     ),

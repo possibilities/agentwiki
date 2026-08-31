@@ -36,6 +36,11 @@ export interface ContractArgument {
   choices?: string[];
   default?: unknown;
   aliases?: string[];
+  /** Inclusive bounds for an integer or number argument. A bound stated only
+   * in prose is a bound a caller violates, so every one the code enforces is
+   * declared here and nowhere else. */
+  minimum?: number;
+  maximum?: number;
   /** What kind of knob this is. A consumer building a call surface exposes
    * only `call`; the rest are concerns the caller already fixed. Absent means
    * `call`, so every global here says which it is. */
@@ -43,10 +48,17 @@ export interface ContractArgument {
 }
 
 export interface ContractConstraint {
-  kind: "one_of" | "conflicts" | "requires";
+  kind: "one_of" | "at_least_one" | "conflicts" | "requires";
   arguments: string[];
   required?: boolean;
   description?: string;
+}
+
+/** A worked invocation. Hand-written help carried these, and a contract that
+ * dropped them would render help visibly worse than what it replaced. */
+export interface ContractExample {
+  invocation: string;
+  description: string;
 }
 
 export interface ContractStdin {
@@ -64,6 +76,10 @@ export interface ContractCommand {
    * promptly. A caller with a request timeout needs to know before it calls. */
   blocking?: boolean;
   guidance?: string;
+  /** Worked invocations, rendered by `help <command>` and appended to the
+   * generated tool description. Declared only where one teaches something the
+   * summary and the argument list do not. */
+  examples?: ContractExample[];
   arguments?: ContractArgument[];
   subcommands?: ContractCommand[];
   stdin?: ContractStdin;
@@ -317,7 +333,14 @@ const LIMIT: ContractArgument = {
   type: "integer",
   description: "Maximum rows.",
   default: 20,
+  // The parser refuses anything below 1; there is no upper bound to declare,
+  // and inventing one would refuse calls the CLI accepts.
+  minimum: 1,
 };
+
+/** Both listen ports, bounded exactly as portValue enforces them. */
+const PORT_MINIMUM = 1;
+const PORT_MAXIMUM = 65535;
 
 const COMMANDS: ContractCommand[] = [
   {
@@ -327,6 +350,16 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     guidance:
       "The slug is derived from the title. An existing slug is a document_exists error rather than a silent second file — use add to capture alongside it.",
+    examples: [
+      {
+        invocation: 'agentwiki new "Bluetooth Q30 HFP trap" --tags evidence,audio',
+        description: "Create bluetooth-q30-hfp-trap.md; the slug is derived from the title.",
+      },
+      {
+        invocation: 'agentwiki new "Weekly review" --template weekly --json',
+        description: "Start from <vault>/.agentwiki/templates/weekly.md.",
+      },
+    ],
     arguments: [
       {
         name: "title",
@@ -356,6 +389,21 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     guidance:
       "Capture must not interrupt: a slug clash slides to <slug>-2 rather than failing the way new does. The title comes from --title, else frontmatter, the first heading, or the file name. Non-markdown text files keep their extension and are indexed for search only.",
+    examples: [
+      {
+        invocation:
+          'agentwiki add --content "$body" --title "Q30 probe run" --tags evidence --json',
+        description: "Capture inline — the channel an out-of-process caller with no pipe has.",
+      },
+      {
+        invocation: "agentwiki add report.md --tags evidence",
+        description: "Capture a file, taking the title from its frontmatter or first heading.",
+      },
+      {
+        invocation: 'cat report.md | agentwiki add --title "Q30 probe run"',
+        description: "Capture from a pipe, in a terminal.",
+      },
+    ],
     stdin: {
       accepts: "text",
       description: "The document body, when neither a file nor --content is given.",
@@ -402,6 +450,16 @@ const COMMANDS: ContractCommand[] = [
     mutates: false,
     guidance:
       "Content comes from the vault file, not a cache. To change a document, take its path and edit the file directly.",
+    examples: [
+      {
+        invocation: "agentwiki get bluetooth-q30-hfp-trap --json",
+        description: "Body plus frontmatter.",
+      },
+      {
+        invocation: 'agentwiki get "the bluetooth trap" --meta-only --json',
+        description: "Metadata without the body, resolved from a spoken phrase.",
+      },
+    ],
     arguments: [
       REF,
       { name: "--meta-only", type: "boolean", description: "Metadata without the body." },
@@ -414,6 +472,13 @@ const COMMANDS: ContractCommand[] = [
     mutates: false,
     guidance:
       "The editing entrypoint: fetch the path, edit that file with your own tools, and the next command indexes and commits the change.",
+    examples: [
+      {
+        invocation: "agentwiki path bluetooth-q30 --json",
+        description:
+          "The absolute path to edit directly, instead of round-tripping the body through get and add.",
+      },
+    ],
     arguments: [REF],
   },
   {
@@ -421,6 +486,12 @@ const COMMANDS: ContractCommand[] = [
     summary: "List documents, most recently updated first",
     audience: "agent",
     mutates: false,
+    examples: [
+      {
+        invocation: "agentwiki list --tag decision --limit 10 --json",
+        description: "The ten most recently updated documents tagged decision.",
+      },
+    ],
     arguments: [
       { name: "--tag", type: "string", description: "Only documents carrying this tag." },
       LIMIT,
@@ -433,6 +504,16 @@ const COMMANDS: ContractCommand[] = [
     mutates: false,
     guidance:
       "Query terms are quoted for you, so apostrophes and hyphens search rather than fail. A trailing * is kept as a prefix search.",
+    examples: [
+      {
+        invocation: 'agentwiki search "bluetooth hfp" --json',
+        description: "Ranked full-text hits with snippets.",
+      },
+      {
+        invocation: 'agentwiki search "bluetoo*" --tag audio --json',
+        description: "A trailing * stays a prefix search; --tag restricts the hits.",
+      },
+    ],
     arguments: [
       {
         name: "query",
@@ -459,6 +540,12 @@ const COMMANDS: ContractCommand[] = [
     mutates: false,
     guidance:
       "Never an error for a phrase that matches nothing: this is the call to make precisely to find out, and the answer to an ambiguous_ref.",
+    examples: [
+      {
+        invocation: 'agentwiki resolve "the bluetooth trap" --json',
+        description: "Ranked candidates when a phrase could mean several documents.",
+      },
+    ],
     arguments: [
       {
         name: "phrase",
@@ -475,6 +562,12 @@ const COMMANDS: ContractCommand[] = [
     summary: "Outgoing wikilinks, mentions, and dangling targets",
     audience: "agent",
     mutates: false,
+    examples: [
+      {
+        invocation: "agentwiki links bluetooth-q30 --json",
+        description: "What this document points at, dangling targets included.",
+      },
+    ],
     arguments: [REF],
   },
   {
@@ -482,6 +575,12 @@ const COMMANDS: ContractCommand[] = [
     summary: "Incoming wikilinks and mentions",
     audience: "agent",
     mutates: false,
+    examples: [
+      {
+        invocation: "agentwiki backlinks bluetooth-q30 --json",
+        description: "Who points here, and whether by wikilink or by mention.",
+      },
+    ],
     arguments: [REF],
   },
   {
@@ -518,6 +617,12 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     guidance:
       "Stamps deleted: and deleted_reason: into the file's frontmatter. The file never moves, so inbound links stay stable and restore is always possible.",
+    examples: [
+      {
+        invocation: 'agentwiki rm bluetooth-q30 --reason "superseded by the duplex device"',
+        description: "Tombstone it; the file stays where it is and every listing excludes it.",
+      },
+    ],
     arguments: [
       REF,
       {
@@ -534,6 +639,12 @@ const COMMANDS: ContractCommand[] = [
     audience: "agent",
     mutates: true,
     guidance: "The ref resolves among tombstoned documents only.",
+    examples: [
+      {
+        invocation: "agentwiki restore bluetooth-q30",
+        description: "Lift the tombstone and return the document to every listing.",
+      },
+    ],
     arguments: [REF],
   },
   {
@@ -541,8 +652,17 @@ const COMMANDS: ContractCommand[] = [
     summary: "Publish a file or directory as an immutable artifact",
     audience: "agent",
     mutates: true,
-    guidance:
-      "The version is the content hash: a single file hashes its bytes, a directory hashes its sorted (file hash, relative path) manifest. Republishing identical bytes yields the same version and changes nothing. Writes a stub document under artifacts/ so the artifact is inside the document graph.",
+    guidance: `The version is the content hash: a single file hashes its bytes, a directory hashes its sorted (file hash, relative path) manifest. Republishing identical bytes yields the same version and changes nothing. Writes a stub document under artifacts/ so the artifact is inside the document graph. Anything over ${MAX_ARTIFACT_BYTES / 1024 / 1024} MB is refused with artifact_too_large.`,
+    examples: [
+      {
+        invocation: "agentwiki publish ./dist --name q30-probe --kind bundle --tag audio --json",
+        description: "Publish a directory; the version is the hash of its sorted file manifest.",
+      },
+      {
+        invocation: 'agentwiki publish report.html --name q30-report --title "Q30 probe report"',
+        description: "A single .html file, whose kind is inferred as page.",
+      },
+    ],
     arguments: [
       {
         name: "path",
@@ -562,7 +682,8 @@ const COMMANDS: ContractCommand[] = [
       {
         name: "--kind",
         type: "string",
-        description: "Manifest metadata only, never engine behavior.",
+        description:
+          "Manifest metadata only, never engine behavior. Inferred when absent: a directory is a bundle, .html is a page, an image, video or audio file is media, anything else is evidence.",
         choices: [...ARTIFACT_KINDS],
       },
       {
@@ -608,6 +729,12 @@ const COMMANDS: ContractCommand[] = [
         summary: "Full manifest detail for a name's latest version",
         audience: "agent",
         mutates: false,
+        examples: [
+          {
+            invocation: "agentwiki artifacts show q30-probe --json",
+            description: "Manifest detail for the latest live version of one artifact name.",
+          },
+        ],
         arguments: [ARTIFACT_NAME],
       },
       {
@@ -617,6 +744,16 @@ const COMMANDS: ContractCommand[] = [
         mutates: true,
         guidance:
           "Bytes survive until gc. The stub document tombstones with the last live version.",
+        examples: [
+          {
+            invocation: 'agentwiki artifacts rm q30-probe --reason "wrong build"',
+            description: "Tombstone every live version of the name.",
+          },
+          {
+            invocation: 'agentwiki artifacts rm q30-probe --version 9f2c1d --reason "wrong build"',
+            description: "Tombstone one version and leave the rest serving.",
+          },
+        ],
         arguments: [
           ARTIFACT_NAME,
           {
@@ -633,6 +770,12 @@ const COMMANDS: ContractCommand[] = [
         summary: "Lift an artifact's tombstone",
         audience: "agent",
         mutates: true,
+        examples: [
+          {
+            invocation: "agentwiki artifacts restore q30-probe --version 9f2c1d",
+            description: "Lift the tombstone on one version rather than on the whole name.",
+          },
+        ],
         arguments: [ARTIFACT_NAME, VERSION_FLAG],
       },
     ],
@@ -644,6 +787,12 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     guidance:
       "Launches a browser on the human's screen, and errors with server_not_running, plus a recovery, when nothing answers.",
+    examples: [
+      {
+        invocation: "agentwiki open q30-probe",
+        description: "Open the artifact's latest URL against the resident server.",
+      },
+    ],
     arguments: [
       ARTIFACT_NAME,
       {
@@ -651,6 +800,8 @@ const COMMANDS: ContractCommand[] = [
         type: "integer",
         description: "Where serve is listening.",
         default: DEFAULT_PORT,
+        minimum: PORT_MINIMUM,
+        maximum: PORT_MAXIMUM,
       },
     ],
   },
@@ -668,20 +819,32 @@ const COMMANDS: ContractCommand[] = [
     summary: "Serve documents and artifacts on demand",
     audience: "operator",
     mutates: true,
+    blocking: true,
     guidance:
       "Blocks until interrupted, so it never returns and never commits. Localhost only, static bytes only, no server-side execution. A resident launch agent (agentwiki.server, installed by AgentStart) already serves the default vault; run this by hand only for a different vault or port. Artifacts bind the second port so they land on an origin of their own: their scripts cannot read /d/<slug> or reach the network. The two ports must differ.",
+    examples: [
+      {
+        invocation: "agentwiki serve --vault ~/other-wiki --port 7877 --artifact-port 7878",
+        description:
+          "Serve a second vault by hand; the resident agent already serves the default one.",
+      },
+    ],
     arguments: [
       {
         name: "--port",
         type: "integer",
         description: "Document listen port.",
         default: DEFAULT_PORT,
+        minimum: PORT_MINIMUM,
+        maximum: PORT_MAXIMUM,
       },
       {
         name: "--artifact-port",
         type: "integer",
         description: "Artifact listen port; must differ from --port.",
         default: DEFAULT_ARTIFACT_PORT,
+        minimum: PORT_MINIMUM,
+        maximum: PORT_MAXIMUM,
       },
     ],
   },
@@ -692,6 +855,12 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     guidance:
       "Every command already commits what it finds changed on its way out, and pushes when a remote exists. This is the explicit form, for a document written and then not read again — and the only way to give the commit your own message.",
+    examples: [
+      {
+        invocation: 'agentwiki commit --message "Record the Q30 probe run"',
+        description: "Record the vault now, with your own subject, instead of on the next command.",
+      },
+    ],
     arguments: [
       {
         name: "--message",
@@ -955,6 +1124,9 @@ export function constraintSentence(
   switch (constraint.kind) {
     case "one_of":
       head = `Give ${constraint.required === true ? "exactly" : "at most"} one of ${list}.`;
+      break;
+    case "at_least_one":
+      head = `Give at least one of ${list}.`;
       break;
     case "requires":
       head = `${members[0]!} requires ${members.slice(1).join(", ")}.`;

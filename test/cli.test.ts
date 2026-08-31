@@ -293,6 +293,26 @@ describe("the agent surface", () => {
     expect(result.stdout).toContain("in-binary fallback");
   });
 
+  test("command help renders the contract's worked invocations", () => {
+    const result = run(["help", "publish"]);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Examples:");
+    expect(result.stdout).toContain("agentwiki publish ./dist --name q30-probe");
+    // The inferred kind is a fact of the CLI the hand-written help carried, and
+    // it lives in the contract now rather than in a second authorship.
+    expect(result.stdout).toContain("a directory is a bundle");
+  });
+
+  test("command help shows the bounds and the blocking warning it is given", () => {
+    const serve = run(["help", "serve"]);
+    expect(serve.status).toBe(0);
+    expect(serve.stdout).toContain("Blocks:");
+    expect(serve.stdout).toContain("1..65535");
+
+    const list = run(["help", "list"]);
+    expect(list.stdout).toContain("minimum 1");
+  });
+
   test("the guide is the agent contract, and names the storage it uses", () => {
     const { status, body } = envelope(["guide", "--json"]);
     expect(status).toBe(0);

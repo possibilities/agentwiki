@@ -13,8 +13,46 @@ import { REGISTRY } from "../src/main.ts";
  */
 
 const ENTRY = join(import.meta.dir, "..", "src", "main.ts");
-const AGENTSTART = process.env["AGENTSTART_ROOT"] ?? join(homedir(), "code", "agentstart");
-const VALIDATOR = join(AGENTSTART, "scripts", "validate-agent-contract.ts");
+const AGENTSTART = process.env["AGENTSTART_HOME"] ?? join(homedir(), "code", "agentstart");
+const VALIDATOR_PATH = join("scripts", "validate-agent-contract.ts");
+
+/**
+ * Where the fleet validator is, or why there is none.
+ *
+ * A gate that skips is not a gate: the previous form called existsSync on one
+ * path and passed silently when it missed, which is exactly what it did while
+ * the validator sat unmerged on a branch. So there are three outcomes and only
+ * one of them is quiet.
+ *
+ * 1. No agentstart checkout at all — the fleet's optional-checkout rule, and
+ *    the one case where skipping is correct.
+ * 2. A checkout, with the validator in it, or in one of its worktrees. Worktree
+ *    discovery is what makes this pass before the validator merges, and step 2
+ *    hits directly once it does.
+ * 3. A checkout and no validator anywhere — a failure naming every path tried,
+ *    because a validator that has moved is news.
+ */
+function findValidator(): { path: string } | { tried: string[] } | "no-checkout" {
+  if (!existsSync(AGENTSTART)) return "no-checkout";
+  const tried: string[] = [];
+  const check = (root: string): string | undefined => {
+    const candidate = join(root, VALIDATOR_PATH);
+    tried.push(candidate);
+    return existsSync(candidate) ? candidate : undefined;
+  };
+  const direct = check(AGENTSTART);
+  if (direct !== undefined) return { path: direct };
+  const listed = Bun.spawnSync({ cmd: ["git", "-C", AGENTSTART, "worktree", "list"] });
+  if (listed.exitCode === 0) {
+    for (const line of listed.stdout.toString().split("\n")) {
+      const root = line.split(/\s+/)[0];
+      if (root === undefined || root === "" || root === AGENTSTART) continue;
+      const found = check(root);
+      if (found !== undefined) return { path: found };
+    }
+  }
+  return { tried };
+}
 
 const contract = buildContract({ vaultRoot: "/tmp/vault", artifactHome: "/tmp/artifacts" });
 const nodes = walkCommands(contract.commands);
@@ -33,15 +71,22 @@ describe("the agent contract", () => {
   });
 
   test("it validates against the fleet schema", () => {
-    if (!existsSync(VALIDATOR)) {
-      // The validator ships in agentstart; without that checkout the shape is
-      // unverifiable here, and a silently passing assertion would be a lie.
-      console.warn(`skipped: no ${VALIDATOR} (set AGENTSTART_ROOT to point at one)`);
+    const found = findValidator();
+    if (found === "no-checkout") {
+      // No agentstart on this machine: the fleet's optional-checkout rule, and
+      // the only silence this test allows itself.
+      console.warn(`skipped: no agentstart checkout at ${AGENTSTART} (set AGENTSTART_HOME)`);
       return;
+    }
+    if (!("path" in found)) {
+      throw new Error(
+        `agentstart is checked out at ${AGENTSTART} but ${VALIDATOR_PATH} is in none of:\n` +
+          found.tried.map((candidate) => `  ${candidate}`).join("\n"),
+      );
     }
     const file = join(process.env["TMPDIR"] ?? "/tmp", `agentwiki-contract-${process.pid}.json`);
     Bun.write(file, JSON.stringify({ schema_version: 1, ok: true, error: null, data: contract }));
-    const run = Bun.spawnSync({ cmd: ["bun", VALIDATOR, "--file", file] });
+    const run = Bun.spawnSync({ cmd: ["bun", found.path, "--file", file] });
     expect(run.stderr.toString() + run.stdout.toString()).toContain("conforms to version 1");
     expect(run.exitCode).toBe(0);
   });
