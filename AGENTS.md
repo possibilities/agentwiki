@@ -8,9 +8,12 @@ glossary — use its canonical terms in code, comments, and commit messages.
 ## Commands
 
 `package.json` has the scripts; `bun run check` is the gate for every commit.
-The one that is not in there: `bash scripts/smoke.sh` runs every command end
-to end against a throwaway HOME and vault, and is the check to run before
-finishing anything that touches the command surface.
+The one that is not in there: `bash scripts/smoke.sh` runs every command that
+returns end to end against a throwaway HOME and vault, and is the check to run
+before finishing anything that touches the command surface. `serve` and `mcp`
+are not among those — both hold the process until something outside it stops
+them — so `test/mcp.test.ts` spawns the server and drives it with a real MCP
+client instead.
 
 ## Map
 
@@ -19,8 +22,20 @@ Three things a listing will not tell you:
 
 - `src/index.ts` is the *domain* index — the derived SQLite index of the
   glossary, not a package entry point.
-- `src/help.ts` and `src/guide.ts` are the human help and the machine card;
-  adding or changing a command means touching both.
+- `src/contract.ts` is the single authored description of the CLI — the fleet
+  agent contract `guide --json` emits. `src/help.ts` renders it: `--help`,
+  `agentwiki help <command>`, `--agent-help` and `--agent-teaser` are all
+  renders, and `src/main.ts` reads each command's flag grammar back out of it.
+  Adding or changing a command means editing the contract, and nothing else.
+- `src/mcp-tools.ts` is the whole contract → MCP mapping and nothing else:
+  which leaves become tools, their names, input schemas, constraint keywords,
+  annotations, the server's instructions, and how a tool call becomes parsed
+  flags. It implements agentstart's `config/agent-contract/MCP.md`, which is
+  normative and which the sibling CLIs also implement, so it stays dull and
+  carries no dispatch. `src/mcp-server.ts` registers what it generates and
+  dispatches each call through `REGISTRY` in this process; `src/mcp.ts`
+  connects the stdio transport. There is no second list of tools: a command
+  added to the contract becomes one with no other edit.
 - `src/envelope.ts`, `src/errors.ts`, `src/flags.ts`, `src/paths.ts` are the
   shared CLI core, copied byte-identical into agentboard.
 

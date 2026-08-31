@@ -54,7 +54,7 @@ document and the installed binary disagree, the binary wins; see
 ## Preflight
 
 ```bash
-agentwiki guide --json     # the machine card: paths, ref tiers, kinds, commands
+agentwiki guide --json     # the agent contract: paths, ref tiers, kinds, commands
 agentwiki doctor --json    # vault + index health, dangling links, orphans
 agentwiki list --limit 10  # what is actually in here
 ```
@@ -75,6 +75,7 @@ scope artifacts; only `XDG_DATA_HOME` does. `guide --json` reports both paths.
 ```bash
 agentwiki new "Bluetooth Q30 HFP trap" --tags evidence,audio --json
 cat report.md | agentwiki add --title "Q30 probe run" --tags evidence --json
+agentwiki add --content "$body" --title "Q30 probe run" --json   # no pipe needed
 agentwiki add ./findings.md --json
 ```
 
@@ -215,7 +216,8 @@ Four things worth knowing:
   source of truth and works completely without history.
 - **A push failure is not lost work.** The commits stay; the next push carries
   them. `agentwiki doctor` reports branch, remote, and how many are unpushed,
-  and `guide --json` carries the same block.
+  and it is the command to ask; the contract describes the behavior, not the
+  live branch.
 - **No remote means nothing to push to.** Adding one is ordinary git
   (`git -C ~/wiki remote add origin <url>`) and is a decision about where your
   notes go — agentwiki will not invent it.
@@ -408,7 +410,7 @@ an artifact the manifest no longer serves: the vault says it exists, only the
 manifest knows it does not. That is `broken_artifact_stubs` in `doctor`.
 
 ```bash
-agentwiki guide --json      # the stable machine card — the five-second re-sync
+agentwiki guide --json      # the agent contract — the five-second re-sync
 agentwiki --agent-help      # the in-binary runbook this skill deepens
 agentwiki help <command>    # per-command flags
 ```

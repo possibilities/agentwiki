@@ -142,11 +142,19 @@ function loadTemplate(
 export async function addDocument(context: Context, flags: ParsedFlags): Promise<CommandResult> {
   if (flags.positional.length > 1) throw new UsageError("add takes at most one file");
   const source = flags.positional[0];
+  const inline = flags.values["content"];
+  if (inline !== undefined && source !== undefined) {
+    throw new UsageError("add takes a file or --content, not both");
+  }
   let text: string;
   let sourceExtension = ".md";
-  if (source === undefined) {
+  if (inline !== undefined) {
+    // An out-of-process caller has no pipe, so the body must be reachable
+    // through argv: --content is the only channel such a caller always has.
+    text = inline;
+  } else if (source === undefined) {
     if (context.stdinIsTerminal) {
-      throw new UsageError("add needs a file argument or content on stdin");
+      throw new UsageError("add needs a file argument, --content, or content on stdin");
     }
     text = await context.readStdin();
   } else {
