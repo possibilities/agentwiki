@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# End-to-end smoke test: exercises every documented agentwiki command against
-# a throwaway HOME and vault.
+# End-to-end smoke test: exercises every documented agentwiki command that
+# returns, against a throwaway HOME and vault. `serve` and `mcp` hold the
+# process instead; test/mcp.test.ts drives the MCP server with a real client.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"

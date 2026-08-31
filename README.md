@@ -44,6 +44,20 @@ agentwiki commit --message "Record the duplex decision"   # usually unnecessary
 agentwiki serve                              # docs :7777, artifacts :7778
 ```
 
+### As an MCP server
+
+```bash
+agentwiki mcp        # stdio; a host starts this, not a person
+```
+
+Every tool it serves is generated from `guide --json` at startup and dispatched
+in the same process — exactly the commands the contract marks `audience: agent`,
+named by their full path (`artifacts list` becomes `artifacts_list`). `--vault`
+and `--json` are not tool arguments: the vault is fixed when the server starts,
+and every tool returns the same envelope the CLI prints. Editing is still the
+CLI's model rather than the protocol's — `path` hands back a file for the
+caller to edit with its own tools.
+
 Every `<ref>` accepts a slug, an exact title, or an unambiguous spoken phrase,
 so a voice agent can say what it means:
 

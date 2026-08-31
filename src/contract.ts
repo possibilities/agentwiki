@@ -29,9 +29,17 @@ export interface ContractArgument {
   required?: boolean;
   positional?: boolean;
   repeatable?: boolean;
+  /** One comma-joined string rather than a repeated flag; when set, `format`
+   * describes the ELEMENT. Every comma-joined argument here is this rather
+   * than repeatable, because the parser refuses a flag given twice. */
+  csv?: boolean;
   choices?: string[];
   default?: unknown;
   aliases?: string[];
+  /** What kind of knob this is. A consumer building a call surface exposes
+   * only `call`; the rest are concerns the caller already fixed. Absent means
+   * `call`, so every global here says which it is. */
+  role?: "call" | "output-format" | "store-selection" | "meta";
 }
 
 export interface ContractConstraint {
@@ -52,6 +60,9 @@ export interface ContractCommand {
   summary: string;
   audience: ContractAudience;
   mutates?: boolean;
+  /** The command waits on something outside itself and may not return
+   * promptly. A caller with a request timeout needs to know before it calls. */
+  blocking?: boolean;
   guidance?: string;
   arguments?: ContractArgument[];
   subcommands?: ContractCommand[];
@@ -327,6 +338,7 @@ const COMMANDS: ContractCommand[] = [
       {
         name: "--tags",
         type: "string",
+        csv: true,
         description: "Comma-joined tags for frontmatter; not repeatable.",
       },
       {
@@ -378,6 +390,7 @@ const COMMANDS: ContractCommand[] = [
       {
         name: "--tags",
         type: "string",
+        csv: true,
         description: "Comma-joined tags, merged with any already in the content's frontmatter.",
       },
     ],
@@ -560,11 +573,13 @@ const COMMANDS: ContractCommand[] = [
       {
         name: "--tag",
         type: "string",
+        csv: true,
         description: "Comma-joined tags for the manifest and the stub document; not repeatable.",
       },
       {
         name: "--tags",
         type: "string",
+        csv: true,
         description: "Accepted spelling of --tag; both are merged.",
       },
     ],
@@ -695,6 +710,16 @@ const COMMANDS: ContractCommand[] = [
     arguments: [],
   },
   {
+    name: "mcp",
+    summary: "Serve the agent commands over MCP on stdio",
+    audience: "internal",
+    mutates: true,
+    blocking: true,
+    guidance:
+      "Not a command to call: it holds stdio as an MCP transport until the host closes it, and every tool it serves is generated from this contract and dispatched in this process. A caller reaching this CLI already has either a terminal or that server.",
+    arguments: [],
+  },
+  {
     name: "help",
     summary: "Show help for a command",
     audience: "operator",
@@ -719,19 +744,27 @@ const GLOBAL_ARGUMENTS: ContractArgument[] = [
     format: "path",
     direction: "in",
     default: DEFAULT_VAULT,
+    role: "store-selection",
   },
-  { name: "--json", type: "boolean", description: "Emit the stable JSON envelope." },
+  {
+    name: "--json",
+    type: "boolean",
+    description: "Emit the stable JSON envelope.",
+    role: "output-format",
+  },
   {
     name: "--jsonl",
     type: "boolean",
     description:
       "Emit newline-delimited records instead of one envelope (list, search, resolve, artifacts list, artifacts versions).",
+    role: "output-format",
   },
   {
     name: "--help",
     type: "boolean",
     description: "Show help for the command and exit.",
     aliases: ["-h"],
+    role: "meta",
   },
 ];
 
@@ -907,3 +940,28 @@ export function findCommand(
 }
 
 export const CONTRACT_COMMANDS: readonly ContractCommand[] = COMMANDS;
+
+/** A constraint said in one sentence. The mapping to MCP needs the prose form
+ * — a rule a caller cannot see is a rule it breaks — and `spell` renames the
+ * arguments for a surface that does not use dashes. `help` keeps its own
+ * two-column rendering, which is a layout rather than a second sentence. */
+export function constraintSentence(
+  constraint: ContractConstraint,
+  spell: (name: string) => string = (name) => name,
+): string {
+  const members = constraint.arguments.map(spell);
+  const list = members.join(", ");
+  let head: string;
+  switch (constraint.kind) {
+    case "one_of":
+      head = `Give ${constraint.required === true ? "exactly" : "at most"} one of ${list}.`;
+      break;
+    case "requires":
+      head = `${members[0]!} requires ${members.slice(1).join(", ")}.`;
+      break;
+    case "conflicts":
+      head = `${list} may not be combined.`;
+      break;
+  }
+  return constraint.description === undefined ? head : `${head} ${constraint.description}`;
+}

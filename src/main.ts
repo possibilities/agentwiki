@@ -66,6 +66,7 @@ export const REGISTRY: Record<string, Handler> = {
   open: openCommand,
   gc: gcCommand,
   serve: serveCommand,
+  mcp: mcpCommand,
   commit: commitCommand,
   guide: guideCommand,
 };
@@ -162,6 +163,25 @@ async function serveCommand(context: Context, flags: ParsedFlags): Promise<Comma
   // Bun keeps the process alive for the listening socket; this await simply
   // never resolves, so nothing downstream tries to print a result.
   await new Promise<never>(() => {});
+  throw new Error("unreachable");
+}
+
+/** The second command that does not return: it holds stdio as an MCP transport
+ * until the host closes it. Nothing may print while it runs — stdout is the
+ * protocol channel — and nothing does, because a handler that never resolves
+ * never reaches `emit`. The server dispatches every tool call back through the
+ * registry above, in this process. */
+async function mcpCommand(context: Context, flags: ParsedFlags): Promise<CommandResult> {
+  if (flags.positional.length > 0) throw new UsageError("mcp takes no positional arguments");
+  // Imported here, not at the top: the server imports this module back for its
+  // dispatcher, and no other command should pay for loading the protocol SDK.
+  const { serveAgentwikiMcp } = await import("./mcp.ts");
+  await serveAgentwikiMcp({
+    env: context.env,
+    home: context.home,
+    cwd: context.cwd,
+    vaultRoot: context.vaultRoot,
+  });
   throw new Error("unreachable");
 }
 
