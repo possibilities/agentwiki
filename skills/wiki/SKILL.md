@@ -449,7 +449,7 @@ one you used last.
 - **`brain`** (agentbrain) — the *ingested* research cache: pages, PDFs, and
   sources someone else wrote, chunked for retrieval. Ingested source material
   belongs there; something you or the user authored belongs here.
-- **`chats`** (cass) — past coding-agent sessions. Transcripts, not documents:
+- **`chats`** (agentchats) — past coding-agent sessions. Transcripts, not documents:
   search there for what was *said*, here for what was *written down*.
 
 A fourth neighbour is a convention, not a CLI: `~/handoffs/` holds dated
