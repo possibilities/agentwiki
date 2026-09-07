@@ -1,6 +1,10 @@
 ---
 name: wiki
-description: Capture, find, link, and publish durable markdown with the agentwiki CLI — a plain-file vault that is the source of truth, full-text search, a wikilink graph, and immutable content-addressed artifacts. The vault is the operator's library — authored documents meant to be found again by name. Use when the user asks for a document ("write this up", "document this"); when finished research, exploration, or a ruled decision deserves a durable named home; when the user asks where something was written down ("where did we document X?", "find that write-up"); when publishing an immutable citable artifact; or when linking documents to each other. Working state, briefs, and successor-session context are ~/handoffs/ files, not wiki pages.
+description: >-
+  Create, find, edit, and link durable authored documents in agentwiki, or
+  publish requested citable artifacts. Use for write-ups, reports, designs,
+  and decisions worth finding again; use brain for collected sources and chats
+  for transcripts.
 ---
 
 # Wiki — the durable document vault
