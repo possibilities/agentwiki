@@ -821,7 +821,7 @@ const COMMANDS: ContractCommand[] = [
     mutates: true,
     blocking: true,
     guidance:
-      "Blocks until interrupted, so it never returns and never commits. Localhost only, static bytes only, no server-side execution. A resident launch agent (agentwiki.server, installed by AgentStart) already serves the default vault; run this by hand only for a different vault or port. Artifacts bind the second port so they land on an origin of their own: their scripts cannot read /d/<slug> or reach the network. The two ports must differ.",
+      "Blocks until interrupted, so it never returns and never commits. Localhost only, static bytes only, no server-side execution. A resident launch agent (io.arthack.agentwiki.serve, installed by AgentStart) already serves the default vault; run this by hand only for a different vault or port. Artifacts bind the second port so they land on an origin of their own: their scripts cannot read /d/<slug> or reach the network. The two ports must differ.",
     examples: [
       {
         invocation: "agentwiki serve --vault ~/other-wiki --port 7877 --artifact-port 7878",
@@ -1038,7 +1038,7 @@ export function buildContract(paths: ContractPaths): Contract {
           host: "loopback only",
           execution: "none — static bytes and rendered markdown only",
           daemon:
-            "agentwiki.server, a user launch agent installed by AgentStart; every other command still works with it stopped",
+            "io.arthack.agentwiki.serve, a user launch agent installed by AgentStart; every other command still works with it stopped",
           document_port: DEFAULT_PORT,
           artifact_port: DEFAULT_ARTIFACT_PORT,
           artifact_isolation:
