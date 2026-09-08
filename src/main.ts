@@ -166,11 +166,9 @@ async function serveCommand(context: Context, flags: ParsedFlags): Promise<Comma
   throw new Error("unreachable");
 }
 
-/** The second command that does not return: it holds stdio as an MCP transport
- * until the host closes it. Nothing may print while it runs — stdout is the
- * protocol channel — and nothing does, because a handler that never resolves
- * never reaches `emit`. The server dispatches every tool call back through the
- * registry above, in this process. */
+/** Holds stdio until the host closes it. The printing path recognizes this
+ * command's return as shutdown, not a command result to emit or sync. Tool
+ * calls dispatch back through the registry in this process. */
 async function mcpCommand(context: Context, flags: ParsedFlags): Promise<CommandResult> {
   if (flags.positional.length > 0) throw new UsageError("mcp takes no positional arguments");
   // Imported here, not at the top: the server imports this module back for its
@@ -182,7 +180,7 @@ async function mcpCommand(context: Context, flags: ParsedFlags): Promise<Command
     cwd: context.cwd,
     vaultRoot: context.vaultRoot,
   });
-  throw new Error("unreachable");
+  return { data: null, human: "" };
 }
 
 function emit(result: CommandResult, mode: "human" | "json" | "jsonl"): void {
@@ -270,7 +268,9 @@ async function main(argv: string[]): Promise<number> {
   };
 
   try {
-    emit(await run(context, flags), mode);
+    const result = await run(context, flags);
+    if (command === "mcp") return 0;
+    emit(result, mode);
     // The vault records itself. Agents edit its files with their own tools, so
     // the end of a command is the only moment agentwiki can see what moved —
     // and emitting first keeps git off the path the caller waits on.
@@ -286,7 +286,7 @@ async function main(argv: string[]): Promise<number> {
       error instanceof CliError
         ? error
         : new CliError("internal_error", (error as Error).message || String(error));
-    if (mode === "human") {
+    if (mode === "human" || command === "mcp") {
       console.error(`error: ${domain.message}`);
       if (domain.recovery !== undefined) console.error(domain.recovery);
     } else {
