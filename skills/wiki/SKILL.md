@@ -9,10 +9,11 @@ description: >-
 
 # Wiki — authored documents
 
-Use Agentwiki's MCP tools through Executor to find and create documents in the
-human's durable library. Discover the operation in the `agentwiki` namespace
-and use its current schema and returned connection path. `guide` supplies the
-broader domain contract.
+Use the `agentwiki` MCP server directly. Select the tool from the harness's
+catalog or tool search, inspect its input schema, and call it with JSON
+arguments. The host may prefix tool names with the server name. `guide`
+provides the installed command contract and recovery guidance.
+Find and create documents in the human's durable library.
 
 The vault's files are the source of truth. The index is derived and reconciles
 before reads, so native file editing and MCP discovery work together. Use the
@@ -73,10 +74,10 @@ not require it.
 
 ## Verify without a second storage workflow
 
-Through Executor, a successful call's `data` is the upstream MCP result; its
-`structuredContent` contains the Agentwiki envelope. A domain error retains
-its JSON envelope as a separate text block in `error.details.content`. Check
-that result before reporting creation, publication, or removal as complete.
+Inspect MCP `isError` and Agentwiki's `{schema_version, ok, error, data}`
+envelope in `structuredContent`. If the host returns only content blocks,
+parse the standalone JSON block and keep diagnostic prose separate. Read
+`error.code` and `recovery` before retrying or claiming success.
 
 Wiki commands automatically record changed vault files in history and perform
 the vault's configured best-effort sync. Never manually commit or push the
