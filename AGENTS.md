@@ -1,8 +1,9 @@
 # agentwiki — repository guidance
 
 Agent-first document store: a vault of plain text files (the source of truth),
-a derived SQLite index, and content-addressed versioned artifacts served
-statically on demand. Read `README.md` for usage, `CONTEXT.md` for the
+a derived SQLite index, and content-addressed versioned artifacts. The default
+vault is served statically by an AgentStart-owned resident LaunchAgent;
+manual serving remains supported for another vault or port. Read `README.md` for usage, `CONTEXT.md` for the
 glossary — use its canonical terms in code, comments, and commit messages.
 
 ## Commands
@@ -59,8 +60,10 @@ that description is all a session has to route on.
 ## Load-bearing decisions
 
 `docs/adr/` records them, one file each: files are the source of truth,
-artifacts are immutable, serving is on demand, tombstones never delete, refs
-resolve in tiers, artifacts get their own origin, and the vault commits itself.
+artifacts are immutable, the default vault has one resident service owner,
+tombstones never delete, refs resolve in tiers, artifacts get their own origin,
+and the vault commits itself. [ADR 0008](docs/adr/0008-the-vault-is-served-by-a-resident-agent.md)
+supersedes on-demand default serving while retaining manual serving.
 
 `src/git.ts` is the only module that shells out to git, and every call in it is
 best-effort by construction: the vault is the source of truth and must stay
