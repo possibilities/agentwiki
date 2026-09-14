@@ -19,7 +19,7 @@ The vault's files are the source of truth. The index is derived and reconciles
 before reads, so native file editing and MCP discovery work together. Use the
 wiki for authored reports, designs, and decisions meant to be found again by
 name. Collected source material belongs in `brain`, past conversations in
-`chats`, and work state on the `board`. Session-specific continuation material
+`chats`, and durable work state in `hud`. Session-specific continuation material
 can stay in the workspace or a dated handoff; it need not become a wiki page.
 
 ## Find and edit
